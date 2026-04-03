@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, File, UploadFile, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
@@ -20,6 +20,8 @@ from app.services.auth_service import (
     create_user_access_token,
     register_user,
 )
+from app.services.user_service import update_user_avatar
+from app.utils.file_storage import delete_local_avatar, save_avatar_file
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
@@ -69,6 +71,17 @@ def read_current_user(
     current_user: User = Depends(get_current_active_user),
 ) -> User:
     return current_user
+
+
+@router.post("/me/avatar", response_model=AuthenticatedUser)
+def upload_my_avatar(
+    avatar: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+) -> User:
+    avatar_url = save_avatar_file(upload_file=avatar, user_id=current_user.id)
+    delete_local_avatar(current_user.avatar_url)
+    return update_user_avatar(db=db, user=current_user, avatar_url=avatar_url)
 
 
 @router.post("/change-password", response_model=AuthenticatedUser)

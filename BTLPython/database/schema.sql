@@ -30,6 +30,7 @@ CREATE TABLE users (
     full_name VARCHAR(255) NOT NULL,
     hashed_password VARCHAR(255) NOT NULL,
     phone_number VARCHAR(20),
+    avatar_url VARCHAR(500),
     role VARCHAR(20) NOT NULL DEFAULT 'staff'
         CHECK (role IN ('admin', 'manager', 'staff')),
     is_active BOOLEAN NOT NULL DEFAULT 1,

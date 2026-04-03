@@ -62,6 +62,7 @@ class AuthenticatedUser(BaseModel):
     username: str
     email: str
     full_name: str
+    avatar_url: str | None = None
     role: UserRole
     department_id: int | None = None
     department: DepartmentSimple | None = None

@@ -15,6 +15,7 @@ class UserBase(BaseModel):
     email: str = Field(min_length=5, max_length=255)
     full_name: str = Field(min_length=2, max_length=255)
     phone_number: str | None = Field(default=None, max_length=20)
+    avatar_url: str | None = Field(default=None, max_length=500)
     role: UserRole = UserRole.STAFF
     department_id: int | None = None
     is_active: bool = True
@@ -38,6 +39,7 @@ class UserUpdate(BaseModel):
     email: str | None = Field(default=None, min_length=5, max_length=255)
     full_name: str | None = Field(default=None, min_length=2, max_length=255)
     phone_number: str | None = Field(default=None, max_length=20)
+    avatar_url: str | None = Field(default=None, max_length=500)
     role: UserRole | None = None
     department_id: int | None = None
     is_active: bool | None = None
@@ -51,6 +53,7 @@ class UserResponse(BaseModel):
     email: str
     full_name: str
     phone_number: str | None = None
+    avatar_url: str | None = None
     role: UserRole
     is_active: bool
     department_id: int | None = None
@@ -65,5 +68,6 @@ class UserSimple(BaseModel):
     id: int
     username: str
     full_name: str
+    avatar_url: str | None = None
     role: UserRole
     is_active: bool

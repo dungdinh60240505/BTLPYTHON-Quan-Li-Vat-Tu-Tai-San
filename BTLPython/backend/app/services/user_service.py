@@ -101,6 +101,7 @@ def create_user(db: Session, payload: UserCreate) -> User:
         email=payload.email.strip().lower(),
         full_name=payload.full_name.strip(),
         phone_number=payload.phone_number.strip() if payload.phone_number else None,
+        avatar_url=payload.avatar_url.strip() if payload.avatar_url else None,
         role=payload.role,
         department_id=department_id,
         is_active=payload.is_active,
@@ -155,6 +156,11 @@ def update_user(db: Session, user: User, payload: UserUpdate) -> User:
             update_data["phone_number"].strip() if update_data["phone_number"] else None
         )
 
+    if "avatar_url" in update_data:
+        user.avatar_url = (
+            update_data["avatar_url"].strip() if update_data["avatar_url"] else None
+        )
+
     if "role" in update_data and update_data["role"] is not None:
         user.role = update_data["role"]
 
@@ -190,6 +196,14 @@ def deactivate_user(db: Session, user: User) -> User:
 
 def activate_user(db: Session, user: User) -> User:
     user.is_active = True
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return get_user_or_404(db=db, user_id=user.id)
+
+
+def update_user_avatar(db: Session, user: User, avatar_url: str | None) -> User:
+    user.avatar_url = avatar_url
     db.add(user)
     db.commit()
     db.refresh(user)

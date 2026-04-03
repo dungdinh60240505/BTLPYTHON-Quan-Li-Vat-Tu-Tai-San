@@ -25,10 +25,6 @@ import { Box, Grid, useToast } from "@chakra-ui/react";
 
 // Custom components
 import Banner from "views/admin/profile/components/Banner";
-import General from "views/admin/profile/components/General";
-import Notifications from "views/admin/profile/components/Notifications";
-import Projects from "views/admin/profile/components/Projects";
-import Storage from "views/admin/profile/components/Storage";
 import Upload from "views/admin/profile/components/Upload";
 
 // Assets
@@ -37,15 +33,26 @@ import avatar from "assets/img/avatars/avatar4.png";
 import React, { useState, useEffect, useCallback } from "react";
 
 const API_BASE_URL = "http://127.0.0.1:8000/api/v1";
+const BACKEND_BASE_URL = "http://127.0.0.1:8000";
+
+const resolveAvatarUrl = (avatarUrl) => {
+  if (!avatarUrl) {
+    return avatar;
+  }
+
+  if (avatarUrl.startsWith("http://") || avatarUrl.startsWith("https://")) {
+    return avatarUrl;
+  }
+
+  return `${BACKEND_BASE_URL}${avatarUrl}`;
+};
 
 export default function Overview() {
   const toast = useToast();
   const [data, setData] = useState({});
-  const [loading, setLoading] = useState(true);
 
   const fetchData = useCallback(async () => {
       try {
-        setLoading(true);
         const token = localStorage.getItem("access_token");
         const res = await fetch(`${API_BASE_URL}/auth/me`, {
           headers: {
@@ -67,8 +74,6 @@ export default function Overview() {
           title: "Fetch data failed",
           status: "error",
         });
-      } finally {
-        setLoading(false);
       }
     }, [toast]);
   
@@ -93,7 +98,7 @@ export default function Overview() {
         <Banner
           gridArea={{ base: "auto", lg: "1 / 1 / 2 / 2" }}
           banner={banner}
-          avatar={avatar}
+          avatar={resolveAvatarUrl(data?.avatar_url)}
 
           name= {data?.full_name ? data.full_name : "No name"}
           department={data.department?.name ? data.department.name : "No department"}
@@ -110,6 +115,8 @@ export default function Overview() {
           total={50}
         /> */}
         <Upload
+          currentAvatarUrl={resolveAvatarUrl(data?.avatar_url)}
+          onUploadSuccess={setData}
           gridArea={{
             base: "auto",
             lg: "1 / 2 / 2 / 3",

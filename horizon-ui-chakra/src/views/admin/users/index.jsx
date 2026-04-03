@@ -46,6 +46,7 @@ export default function Settings() {
             email: item.email,
             full_name: item.full_name,
             phone_number: item.phone_number,
+            avatar_url: item.avatar_url,
             role: item.role,
             department_id: item.department_id,
             department: item.department?.name,

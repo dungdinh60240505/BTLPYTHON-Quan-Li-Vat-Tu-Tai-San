@@ -1,4 +1,5 @@
 from functools import lru_cache
+from pathlib import Path
 from typing import List
 
 from pydantic import Field
@@ -35,6 +36,11 @@ class Settings(BaseSettings):
         "http://localhost:5173",
         "http://127.0.0.1:5173",
     ]
+
+    BACKEND_DIR: Path = Path(__file__).resolve().parents[2]
+    UPLOADS_DIR: Path = BACKEND_DIR / "uploads"
+    AVATAR_UPLOAD_DIR: Path = UPLOADS_DIR / "avatars"
+    MAX_AVATAR_SIZE_BYTES: int = 2 * 1024 * 1024
 
 
 @lru_cache
