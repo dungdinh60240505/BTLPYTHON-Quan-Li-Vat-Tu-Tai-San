@@ -1,0 +1,205 @@
+Để xử lý **bảo hành thiết bị** trong một web quản lý (ví dụ hệ thống quản lý tài sản trong cơ quan), bạn nên thiết kế theo kiểu **quản lý vòng đời bảo hành + ticket xử lý**. Mình sẽ đi từ **đơn giản → chuẩn thực tế (giống doanh nghiệp)**:
+
+---
+
+# 🧩 1. Dữ liệu cần có (Database design)
+
+## 📦 Bảng `assets` (thiết bị)
+
+* `id`
+* `name`
+* `serial_number`
+* `purchase_date`
+* `warranty_expiry_date`
+* `supplier_id`
+* `status` (đang dùng, hỏng, bảo hành...)
+
+---
+
+## 🧾 Bảng `warranty_records` (lịch sử bảo hành)
+
+* `id`
+* `asset_id`
+* `start_date`
+* `end_date`
+* `provider` (hãng / bên bảo hành)
+* `status` (còn hạn / hết hạn)
+* `note`
+
+👉 Giúp theo dõi nhiều lần bảo hành (quan trọng)
+
+---
+
+## 🎫 Bảng `maintenance_requests` (yêu cầu sửa chữa / bảo hành)
+
+* `id`
+* `asset_id`
+* `reported_by`
+* `issue_description`
+* `request_type` (repair / warranty)
+* `status`:
+
+  * pending
+  * approved
+  * in_progress
+  * completed
+* `assigned_to` (người phụ trách)
+* `created_at`
+
+---
+
+## 📄 Bảng `warranty_claims` (phiếu gửi bảo hành)
+
+* `id`
+* `request_id`
+* `sent_date`
+* `expected_return_date`
+* `actual_return_date`
+* `result` (đã sửa / đổi mới / từ chối)
+* `cost` (nếu có)
+* `note`
+
+---
+
+# 🔄 2. Luồng xử lý (Workflow)
+
+### 🟢 Bước 1: Báo lỗi
+
+* Nhân viên tạo ticket:
+  → “Máy in bị lỗi không in được”
+
+---
+
+### 🟡 Bước 2: Kiểm tra bảo hành
+
+Backend tự check:
+
+```pseudo
+if today <= warranty_expiry_date:
+    -> còn bảo hành
+else:
+    -> sửa ngoài
+```
+
+---
+
+### 🔵 Bước 3: Duyệt yêu cầu
+
+* Admin / IT:
+
+  * xác nhận lỗi
+  * chọn:
+
+    * gửi bảo hành
+    * sửa nội bộ
+
+---
+
+### 🟣 Bước 4: Gửi bảo hành
+
+* Tạo `warranty_claim`
+* Cập nhật:
+
+  * asset.status = "in_warranty"
+  * request.status = "in_progress"
+
+---
+
+### 🟤 Bước 5: Nhận lại thiết bị
+
+* Update:
+
+  * `actual_return_date`
+  * `result`
+* asset.status → "active" hoặc "broken"
+
+---
+
+### ⚫ Bước 6: Lưu lịch sử
+
+* Lưu toàn bộ vào `warranty_records` + `claims`
+
+---
+
+# 🧠 3. Logic thông minh nên có
+
+### ✅ Tự động cảnh báo
+
+* Sắp hết bảo hành (trước 30 ngày)
+* Đã gửi bảo hành quá lâu chưa nhận lại
+
+---
+
+### ✅ Gợi ý xử lý
+
+* Nếu hết bảo hành:
+  → chuyển sang “repair” thay vì “warranty”
+
+---
+
+### ✅ Tracking rõ ràng
+
+* Ai gửi?
+* Gửi ngày nào?
+* Đang ở đâu?
+
+---
+
+# 🖥️ 4. UI nên có
+
+## 📊 Dashboard
+
+* Thiết bị còn bảo hành
+* Thiết bị sắp hết hạn
+* Thiết bị đang gửi bảo hành
+
+---
+
+## 📋 Trang chi tiết thiết bị
+
+* Thông tin bảo hành
+* Lịch sử sửa chữa
+* Nút: “Gửi bảo hành”
+
+---
+
+## 🎫 Trang ticket
+
+* Danh sách yêu cầu
+* Filter:
+
+  * warranty / repair
+  * status
+
+---
+
+# ⚙️ 5. Best practice (quan trọng)
+
+* ❌ Không lưu mỗi `warranty_expiry_date` là đủ
+
+* ✅ Phải có **history (lịch sử bảo hành)**
+
+* ❌ Không để trạng thái mơ hồ
+
+* ✅ Dùng enum rõ ràng: `pending → approved → in_progress → done`
+
+* ❌ Không tách bảo hành & sửa chữa
+
+* ✅ Gom chung vào **maintenance system**
+
+---
+
+# 🎯 Tóm lại
+
+Muốn làm chuẩn:
+
+> **Asset → Ticket → Warranty Claim → History**
+
+---
+
+Nếu bạn đang làm project (ví dụ backend Python hoặc React), mình có thể:
+
+* vẽ ERD chuẩn luôn
+* hoặc viết API mẫu (CRUD + workflow)
+
+→ nói mình biết tech bạn dùng 👍

@@ -1,0 +1,156 @@
+DB BTL PYTHON
+Câu này là “core” của project luôn 👍 — nếu bạn thiết kế tốt 3 bảng **asset / supply / maintenance** thì gần như hệ thống của bạn đã rất chuẩn rồi.
+
+Mình sẽ gợi ý theo hướng **thực tế + dễ implement + đủ để đi xin intern/junior** 👇
+
+---
+
+# 🏷️ 1. Asset (Tài sản)
+
+👉 Quản lý từng tài sản riêng lẻ (máy tính, bàn ghế…)
+
+### 📌 Thuộc tính nên có:
+
+* `id` – khóa chính
+
+* `asset_code` – mã tài sản (unique)
+
+* `name` – tên tài sản
+
+* `category_id` – loại (máy tính, bàn ghế…)
+
+* `brand` – hãng
+
+* `model` – model
+
+* `serial_number` – số serial (nếu có)
+
+* `purchase_date` – ngày mua
+
+* `purchase_price` – giá mua
+
+* `warranty_expiry` – hết bảo hành
+
+* `status` – trạng thái
+
+  * available / in_use / maintenance / broken
+
+* `location_id` – đang ở phòng nào
+
+* `assigned_to` – ai đang dùng (liên kết allocation)
+
+* `condition` – tình trạng (good, fair, poor)
+
+* `note` – ghi chú
+
+* `created_at`, `updated_at`
+
+---
+
+# 📦 2. Supply (Vật tư)
+
+👉 Quản lý theo **số lượng**, không phải từng item
+
+### 📌 Thuộc tính:
+
+* `id`
+
+* `name`
+
+* `category_id`
+
+* `unit` – đơn vị (cái, hộp, kg…)
+
+* `quantity` – số lượng hiện tại
+
+* `min_threshold` – ngưỡng cảnh báo
+
+* `import_price` – giá nhập
+
+* `supplier` – nhà cung cấp
+
+* `last_import_date`
+
+* `last_export_date`
+
+* `storage_location` – kho
+
+* `note`
+
+* `created_at`, `updated_at`
+
+---
+
+# 🛠️ 3. Maintenance (Bảo trì / sửa chữa)
+
+👉 Gắn với **asset** (không áp dụng cho supply)
+
+### 📌 Thuộc tính:
+
+* `id`
+
+* `asset_id` – FK tới asset
+
+* `type` – loại
+
+  * maintenance / repair
+
+* `description` – mô tả lỗi / công việc
+
+* `status`
+
+  * pending / in_progress / completed
+
+* `reported_date` – ngày báo lỗi
+
+* `start_date`
+
+* `end_date`
+
+* `cost` – chi phí sửa
+
+* `handled_by` – người sửa / đơn vị sửa
+
+* `result` – kết quả (fixed / replaced…)
+
+* `note`
+
+* `created_at`, `updated_at`
+
+---
+
+# 🔗 Gợi ý liên kết quan trọng
+
+* `asset` ↔ `maintenance` (1 - nhiều)
+* `asset` ↔ `allocation` (1 - nhiều)
+* `supply` ↔ `transactions` (nên có thêm bảng này)
+
+---
+
+# 💡 Bonus (nâng level project)
+
+### 👉 Nên thêm:
+
+* `categories` (dùng chung cho asset + supply)
+* `locations` (phòng học, kho…)
+* `users` (giáo viên, admin)
+
+### 👉 Với supply:
+
+→ Tốt nhất tách thêm:
+
+* `supply_transactions` (import / export log)
+
+---
+
+# ✅ Tóm lại
+
+* **Asset** → chi tiết từng món, có vòng đời
+* **Supply** → số lượng, nhập/xuất
+* **Maintenance** → lịch sử sửa chữa của asset
+
+---
+
+Nếu bạn muốn đi “pro hơn”:
+👉 mình có thể vẽ luôn **ERD chuẩn + database schema (SQL)** hoặc
+👉 design theo kiểu **microservice / REST API cho portfolio** 🚀
