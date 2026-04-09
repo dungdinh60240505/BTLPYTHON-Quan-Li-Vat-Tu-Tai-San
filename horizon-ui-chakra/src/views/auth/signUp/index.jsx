@@ -137,29 +137,7 @@ function SignUp() {
             mx={{ base: "auto", lg: "unset" }}
             me='auto'
             mb={{ base: "20px", md: "auto" }}>
-            <Button
-              fontSize='sm'
-              me='0px'
-              mb='26px'
-              py='15px'
-              h='50px'
-              borderRadius='16px'
-              bg={googleBg}
-              color={googleText}
-              fontWeight='500'
-              _hover={googleHover}
-              _active={googleActive}
-              _focus={googleActive}>
-              <Icon as={FcGoogle} w='20px' h='20px' me='10px' />
-              Sign up with Google
-            </Button>
-            <Flex align='center' mb='25px'>
-              <HSeparator />
-              <Text color='gray.400' mx='14px'>
-                or
-              </Text>
-              <HSeparator />
-            </Flex>
+            
             <FormControl>
               <FormLabel
                 display='flex'
@@ -172,6 +150,27 @@ function SignUp() {
               </FormLabel>
               <Input
                 name='username'
+                isRequired={true}
+                variant='auth'
+                fontSize='sm'
+                ms={{ base: "0px", md: "0px" }}
+                type='text'
+                placeholder='Your username'
+                mb='24px'
+                fontWeight='500'
+                size='lg'
+              />
+              <FormLabel
+                display='flex'
+                ms='4px'
+                fontSize='sm'
+                fontWeight='500'
+                color={textColor}
+                mb='8px'>
+                Full name<Text color={brandStars}>*</Text>
+              </FormLabel>
+              <Input
+                name='full_name'
                 isRequired={true}
                 variant='auth'
                 fontSize='sm'
@@ -259,48 +258,6 @@ function SignUp() {
                   />
                 </InputRightElement>
               </InputGroup>
-              <FormLabel
-                display='flex'
-                ms='4px'
-                fontSize='sm'
-                fontWeight='500'
-                color={textColor}
-                mb='8px'>
-                Role<Text color={brandStars}>*</Text>
-              </FormLabel>
-              <Select
-                name='role'
-                placeholder='Select role'
-                variant='auth'
-                fontSize='sm'
-                mb='24px'
-                fontWeight='500'
-                size='lg'>
-                <option value='admin'>Admin</option>
-                <option value='staff'>Staff</option>
-              </Select>
-
-              <FormLabel
-                display='flex'
-                ms='4px'
-                fontSize='sm'
-                fontWeight='500'
-                color={textColor}
-                mb='8px'>
-                Department<Text color={brandStars}>*</Text>
-              </FormLabel>
-              <Select
-                name='department'
-                placeholder='Select department'
-                variant='auth'
-                fontSize='sm'
-                mb='24px'
-                fontWeight='500'
-                size='lg'>
-                <option value='1'>Department 1</option>
-                <option value='2'>Department 2</option>
-                <option value='3'>Department 3</option>
-              </Select>
 
               <FormLabel
                 display='flex'
@@ -324,23 +281,6 @@ function SignUp() {
                 size='lg'
               />
 
-              <Flex justifyContent='space-between' align='center' mb='24px'>
-                <FormControl display='flex' alignItems='center'>
-                  <Checkbox
-                    id='agree-terms'
-                    colorScheme='brandScheme'
-                    me='10px'
-                  />
-                  <FormLabel
-                    htmlFor='agree-terms'
-                    mb='0'
-                    fontWeight='normal'
-                    color={textColor}
-                    fontSize='sm'>
-                    I agree to the Terms and Conditions
-                  </FormLabel>
-                </FormControl>
-              </Flex>
               <Button
                 type='submit'
                 fontSize='sm'
