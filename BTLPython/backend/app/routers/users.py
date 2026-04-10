@@ -8,9 +8,8 @@ from app.dependencies.auth import get_current_active_user, require_roles
 from app.models.user import User, UserRole
 from app.schemas.user import UserCreate, UserResponse, UserUpdate
 from app.services.user_service import (
-    activate_user,
     create_user,
-    deactivate_user,
+    delete_user,
     get_user_or_404,
     list_users,
     update_user,
@@ -26,7 +25,6 @@ def read_users(
     keyword: str | None = Query(default=None, min_length=1, max_length=255),
     department_id: int | None = Query(default=None, ge=1),
     role: UserRole | None = Query(default=None),
-    is_active: bool | None = Query(default=None),
     db: Session = Depends(get_db),
     _: User = Depends(require_roles(UserRole.ADMIN, UserRole.MANAGER)),
 ):
@@ -37,7 +35,6 @@ def read_users(
         keyword=keyword,
         department_id=department_id,
         role=role.value if role is not None else None,
-        is_active=is_active,
     )
 
 
@@ -73,21 +70,11 @@ def update_existing_user(
     return update_user(db=db, user=user, payload=payload)
 
 
-@router.patch("/{user_id}/deactivate", response_model=UserResponse)
-def deactivate_existing_user(
+@router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_existing_user(
     user_id: int,
     db: Session = Depends(get_db),
     _: User = Depends(require_roles(UserRole.ADMIN)),
 ):
     user = get_user_or_404(db=db, user_id=user_id)
-    return deactivate_user(db=db, user=user)
-
-
-@router.patch("/{user_id}/activate", response_model=UserResponse)
-def activate_existing_user(
-    user_id: int,
-    db: Session = Depends(get_db),
-    _: User = Depends(require_roles(UserRole.ADMIN)),
-):
-    user = get_user_or_404(db=db, user_id=user_id)
-    return activate_user(db=db, user=user)
+    delete_user(db=db, user=user)

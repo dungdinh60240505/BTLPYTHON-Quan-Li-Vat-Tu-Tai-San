@@ -33,6 +33,13 @@ def read_dashboard_summary(
 ):
     return get_dashboard_summary(db=db)
 
+@router.get("/inactive-users")
+def read_inactive_users(
+    db: Session = Depends(get_db),  
+    _: User = Depends(require_manager_or_admin),
+):
+    return User.get_all_inactive_users(db=db)
+
 
 @router.get("/asset-status-summary", response_model=list[AssetStatusSummaryItem])
 def read_asset_status_summary(

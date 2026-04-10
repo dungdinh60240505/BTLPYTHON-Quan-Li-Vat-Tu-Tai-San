@@ -283,10 +283,16 @@ export default function ColumnsTable(props) {
     }
   }, [currentPage, pageIndex]);
 
+  React.useEffect(() => {
+    if (modalMode === "edit" && selectedMaintenance) {
+      setIsModalOpen(true);
+    }
+  }, [modalMode, selectedMaintenance]);
+
   const handleRowClick = (maintenance) => {
-    setSelectedMaintenance(maintenance);
+    setIsModalOpen(false);
     setModalMode("edit");
-    setIsModalOpen(true);
+    setSelectedMaintenance(maintenance);
   };
 
   const handleCloseModal = () => {
@@ -330,6 +336,7 @@ export default function ColumnsTable(props) {
               borderRadius="12px"
               fontWeight="700"
               onClick={() => {
+                setIsModalOpen(false);
                 setSelectedMaintenance(null);
                 setModalMode("create");
                 setIsModalOpen(true);
@@ -337,40 +344,6 @@ export default function ColumnsTable(props) {
             >
               {addLabel}
             </Button>
-            <Menu>
-              <MenuButton
-                as={Button}
-                leftIcon={<Icon as={MdFilterList} boxSize={4} />}
-                bg={filterButtonBg}
-                _hover={{ bg: filterButtonHoverBg }}
-                _active={{ bg: filterButtonHoverBg }}
-                borderRadius="12px"
-                fontWeight="700"
-              >
-                Filter
-              </MenuButton>
-              <MenuList
-                minW="180px"
-                border="transparent"
-                bg={filterMenuBg}
-                boxShadow={filterMenuShadow}
-                borderRadius="16px"
-                p="10px"
-              >
-                <MenuItem borderRadius="10px" onClick={() => toggleFilter("active")}>
-                  <Flex w="100%" align="center" justifyContent="space-between">
-                    <Text>Active</Text>
-                    {filters.active && <Icon as={MdCheck} boxSize={4} />}
-                  </Flex>
-                </MenuItem>
-                <MenuItem borderRadius="10px" onClick={() => toggleFilter("inactive")}>
-                  <Flex w="100%" align="center" justifyContent="space-between">
-                    <Text>Inactive</Text>
-                    {filters.inactive && <Icon as={MdCheck} boxSize={4} />}
-                  </Flex>
-                </MenuItem>
-              </MenuList>
-            </Menu>
           </Flex>
         </Flex>
         <Flex px="25px" mb="4px" gap="12px" flexDirection={{ base: "column", md: "row" }} wrap="wrap">

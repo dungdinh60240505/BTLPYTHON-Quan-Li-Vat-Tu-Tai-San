@@ -22,7 +22,6 @@ class SupplyBase(BaseModel):
     description: str | None = Field(default=None, max_length=2000)
     note: str | None = Field(default=None, max_length=2000)
     managed_department_id: int | None = Field(default=None, ge=1)
-    is_active: bool = True
 
 
 class SupplyCreate(SupplyBase):
@@ -43,7 +42,6 @@ class SupplyUpdate(BaseModel):
     description: str | None = Field(default=None, max_length=2000)
     note: str | None = Field(default=None, max_length=2000)
     managed_department_id: int | None = Field(default=None, ge=1)
-    is_active: bool | None = None
 
 
 class SupplyResponse(BaseModel):
@@ -62,7 +60,6 @@ class SupplyResponse(BaseModel):
     note: str | None = None
     managed_department_id: int | None = None
     managed_department: DepartmentSimple | None = None
-    is_active: bool
     created_at: datetime
     updated_at: datetime
 

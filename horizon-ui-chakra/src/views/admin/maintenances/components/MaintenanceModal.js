@@ -3,8 +3,10 @@ import {
   Badge,
   Button,
   FormControl,
+  FormHelperText,
   FormLabel,
   Input,
+  Link,
   Modal,
   ModalBody,
   ModalCloseButton,
@@ -15,7 +17,6 @@ import {
   Select,
   SimpleGrid,
   Stack,
-  Switch,
   Textarea,
   useColorModeValue,
 } from "@chakra-ui/react";
@@ -34,7 +35,6 @@ const initialFormData = {
   vendor_name: "",
   resolution_note: "",
   assigned_to_user_id: "",
-  is_active: true,
 };
 
 const toDateInputValue = (value) => {
@@ -84,11 +84,14 @@ export default function MaintenanceModal(props) {
   const readOnlyBorderColor = useColorModeValue("secondaryGray.100", "whiteAlpha.100");
   const readOnlyBg = useColorModeValue("secondaryGray.300", "navy.700");
   const [formData, setFormData] = React.useState(initialFormData);
+  const [attachmentFile, setAttachmentFile] = React.useState(null);
+  const [removeAttachment, setRemoveAttachment] = React.useState(false);
 
   React.useEffect(() => {
-    if (!isOpen) return;
     if (isCreateMode) {
       setFormData(initialFormData);
+      setAttachmentFile(null);
+      setRemoveAttachment(false);
       setIsEditing(true);
       return;
     }
@@ -107,10 +110,11 @@ export default function MaintenanceModal(props) {
       vendor_name: maintenance.vendor_name || "",
       resolution_note: maintenance.resolution_note || "",
       assigned_to_user_id: maintenance.assigned_to_user_id ?? "",
-      is_active: Boolean(maintenance.is_active_raw),
     });
+    setAttachmentFile(null);
+    setRemoveAttachment(false);
     setIsEditing(false);
-  }, [maintenance, isCreateMode, isOpen]);
+  }, [maintenance, isCreateMode]);
 
   const handleChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -134,7 +138,7 @@ export default function MaintenanceModal(props) {
               vendor_name: formData.vendor_name.trim(),
               resolution_note: formData.resolution_note.trim(),
               assigned_to_user_id: formData.assigned_to_user_id === "" ? null : Number(formData.assigned_to_user_id),
-              is_active: formData.is_active,
+              attachmentFile,
             }
           : {
               id: maintenance.id,
@@ -149,11 +153,14 @@ export default function MaintenanceModal(props) {
               vendor_name: formData.vendor_name.trim(),
               resolution_note: formData.resolution_note.trim(),
               assigned_to_user_id: formData.assigned_to_user_id === "" ? null : Number(formData.assigned_to_user_id),
-              is_active: formData.is_active,
               status: formData.status,
               original_status: maintenance.status,
+              attachmentFile,
+              removeAttachment,
             }
       );
+      setAttachmentFile(null);
+      setRemoveAttachment(false);
       if (!isCreateMode) setIsEditing(false);
     } catch (_) {
       // Keep modal open so the user can read the toast and adjust the form.
@@ -169,6 +176,8 @@ export default function MaintenanceModal(props) {
     borderColor: readOnlyBorderColor,
     bg: readOnlyBg,
   };
+  const hasExistingAttachment = Boolean(maintenance?.attachment_url);
+  const selectedAttachmentName = attachmentFile?.name || "";
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} isCentered size="xl">
@@ -279,9 +288,49 @@ export default function MaintenanceModal(props) {
                 <FormLabel>Resolution Note</FormLabel>
                 <Textarea value={formData.resolution_note} onChange={(e) => handleChange("resolution_note", e.target.value)} rows={3} />
               </FormControl>
-              <FormControl display="flex" alignItems="center" gap={3}>
-                <FormLabel mb="0">Active</FormLabel>
-                <Switch isChecked={formData.is_active} onChange={(e) => handleChange("is_active", e.target.checked)} />
+              <FormControl>
+                <FormLabel>Attachment</FormLabel>
+                {!isCreateMode && hasExistingAttachment && !removeAttachment && (
+                  <Stack spacing={2} mb={3}>
+                    <Link href={maintenance.attachment_href} color="blue.500" fontWeight="600" isExternal>
+                      {maintenance.attachment_original_name || "Open attachment"}
+                    </Link>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      colorScheme="red"
+                      alignSelf="flex-start"
+                      onClick={() => {
+                        setRemoveAttachment(true);
+                        setAttachmentFile(null);
+                      }}
+                    >
+                      Remove current file
+                    </Button>
+                  </Stack>
+                )}
+                {!isCreateMode && hasExistingAttachment && removeAttachment && (
+                  <FormHelperText color="red.400" mb={2}>
+                    Current attachment will be removed when you save.
+                  </FormHelperText>
+                )}
+                <Input
+                  type="file"
+                  accept=".jpg,.jpeg,.png,.webp,.pdf,.doc,.docx,.xls,.xlsx"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0] || null;
+                    setAttachmentFile(file);
+                    if (file) {
+                      setRemoveAttachment(false);
+                    }
+                  }}
+                  p={1}
+                />
+                <FormHelperText>
+                  {selectedAttachmentName
+                    ? `Selected file: ${selectedAttachmentName}`
+                    : "Accepted: JPG, PNG, WEBP, PDF, DOC, DOCX, XLS, XLSX. Max 10MB."}
+                </FormHelperText>
               </FormControl>
             </Stack>
           ) : (
@@ -304,6 +353,16 @@ export default function MaintenanceModal(props) {
               <FormControl><FormLabel>Updated At</FormLabel><Input value={maintenance.updated_at || ""} {...readOnlyFieldProps} /></FormControl>
               <FormControl><FormLabel>Cost</FormLabel><Input value={maintenance.cost ?? ""} {...readOnlyFieldProps} /></FormControl>
               <FormControl><FormLabel>Vendor Name</FormLabel><Input value={maintenance.vendor_name || ""} {...readOnlyFieldProps} /></FormControl>
+              <FormControl>
+                <FormLabel>Attachment</FormLabel>
+                {maintenance.attachment_href ? (
+                  <Link href={maintenance.attachment_href} color="blue.500" fontWeight="600" isExternal>
+                    {maintenance.attachment_original_name || "Open attachment"}
+                  </Link>
+                ) : (
+                  <Input value="No attachment" {...readOnlyFieldProps} />
+                )}
+              </FormControl>
               <FormControl gridColumn={{ base: "1 / -1", md: "1 / -1" }}><FormLabel>Description</FormLabel><Textarea value={maintenance.description || ""} {...readOnlyFieldProps} rows={3} /></FormControl>
               <FormControl gridColumn={{ base: "1 / -1", md: "1 / -1" }}><FormLabel>Resolution Note</FormLabel><Textarea value={maintenance.resolution_note || ""} {...readOnlyFieldProps} rows={3} /></FormControl>
             </SimpleGrid>

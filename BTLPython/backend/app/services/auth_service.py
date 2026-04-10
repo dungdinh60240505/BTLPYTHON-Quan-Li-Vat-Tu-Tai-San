@@ -41,12 +41,6 @@ def authenticate_user(db: Session, username: str, password: str) -> User:
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    if not user.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="User account is inactive",
-        )
-
     return user
 
 
@@ -84,7 +78,6 @@ def register_user(db: Session, payload: RegisterRequest) -> User:
         role=payload.role,
         department_id=payload.department_id,
         phone_number=payload.phone_number,
-        is_active=True,
     )
 
     db.add(user)

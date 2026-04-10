@@ -40,7 +40,6 @@ def list_assets(
     condition_filter: str | None = None,
     assigned_department_id: int | None = None,
     assigned_user_id: int | None = None,
-    is_active: bool | None = None,
 ) -> list[Asset]:
     statement = (
         select(Asset)
@@ -78,9 +77,6 @@ def list_assets(
 
     if assigned_user_id is not None:
         statement = statement.where(Asset.assigned_user_id == assigned_user_id)
-
-    if is_active is not None:
-        statement = statement.where(Asset.is_active == is_active)
 
     return list(db.scalars(statement).all())
 
@@ -132,7 +128,6 @@ def create_asset(db: Session, payload: AssetCreate) -> Asset:
         note=payload.note.strip() if payload.note else None,
         assigned_department_id=assigned_department_id,
         assigned_user_id=assigned_user_id,
-        is_active=payload.is_active,
     )
 
     db.add(asset)
@@ -229,9 +224,6 @@ def update_asset(db: Session, asset: Asset, payload: AssetUpdate) -> Asset:
                 )
         asset.assigned_user_id = assigned_user_id
 
-    if "is_active" in update_data and update_data["is_active"] is not None:
-        asset.is_active = update_data["is_active"]
-
     db.add(asset)
     db.commit()
     db.refresh(asset)
@@ -253,12 +245,9 @@ def update_asset_status(db: Session, asset: Asset, payload: AssetStatusUpdate) -
 
 
 
-def deactivate_asset(db: Session, asset: Asset) -> Asset:
-    asset.is_active = False
-    db.add(asset)
+def delete_asset(db: Session, asset: Asset) -> None:
+    db.delete(asset)
     db.commit()
-    db.refresh(asset)
-    return get_asset_or_404(db=db, asset_id=asset.id)
 
 
 

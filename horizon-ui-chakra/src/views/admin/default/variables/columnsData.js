@@ -31,7 +31,7 @@ export const columnsDataComplex = [
   },
 ];
 
-export const columnsDataInactiveUsers = [
+export const columnsDataActiveUsers = [
   {
     Header: "USERNAME",
     accessor: "username",

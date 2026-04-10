@@ -15,7 +15,7 @@ from app.schemas.allocation import (
 )
 from app.services.allocation_service import (
     create_allocation,
-    deactivate_allocation,
+    delete_allocation,
     get_allocation_or_404,
     list_allocations,
     update_allocation,
@@ -95,11 +95,11 @@ def update_existing_allocation_status(
     return update_allocation_status(db=db, allocation=allocation, payload=payload)
 
 
-@router.patch("/{allocation_id}/deactivate", response_model=AllocationResponse)
-def deactivate_existing_allocation(
+@router.delete("/{allocation_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_existing_allocation(
     allocation_id: int,
     db: Session = Depends(get_db),
     _: User = Depends(require_roles(UserRole.ADMIN)),
 ):
     allocation = get_allocation_or_404(db=db, allocation_id=allocation_id)
-    return deactivate_allocation(db=db, allocation=allocation)
+    delete_allocation(db=db, allocation=allocation)

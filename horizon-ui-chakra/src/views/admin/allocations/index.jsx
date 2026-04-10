@@ -29,6 +29,7 @@ const getErrorMessage = async (res, fallbackMessage) => {
 export default function Settings() {
   const [tableData, setTableData] = useState([]);
   const [assetOptions, setAssetOptions] = useState([]);
+  const [supplyOptions, setSupplyOptions] = useState([]);
   const [departmentOptions, setDepartmentOptions] = useState([]);
   const [userOptions, setUserOptions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -74,7 +75,6 @@ export default function Settings() {
             returned_at_raw: item.returned_at,
             purpose: item.purpose,
             note: item.note,
-            is_active_raw: item.is_active,
             created_at_raw: item.created_at,
             updated_at_raw: item.updated_at,
             item_name: item.asset?.name || item.supply?.name || "-",
@@ -87,7 +87,6 @@ export default function Settings() {
             returned_at: formatDateTime(item.returned_at),
             created_at: formatDateTime(item.created_at),
             updated_at: formatDateTime(item.updated_at),
-            is_active: item.is_active ? "Active" : "Inactive",
           }))
       );
     } catch (error) {
@@ -109,8 +108,14 @@ export default function Settings() {
     const fetchSelectOptions = async () => {
       try {
         const token = localStorage.getItem("access_token");
-        const [assetsRes, departmentsRes, usersRes] = await Promise.all([
+        const [assetsRes, suppliesRes, departmentsRes, usersRes] = await Promise.all([
           fetch(`${API_BASE_URL}/assets`, {
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+          }),
+          fetch(`${API_BASE_URL}/supplies`, {
             headers: {
               "Content-Type": "application/json",
               Authorization: `Bearer ${token}`,
@@ -137,6 +142,19 @@ export default function Settings() {
               value: String(item.id),
               label: `${item.id} - ${item.name}`,
             }))
+          );
+        }
+
+        if (suppliesRes.ok) {
+          const supplies = await suppliesRes.json();
+          setSupplyOptions(
+            supplies
+              .filter((item) => Number(item.quantity_in_stock ?? 0) > 0)
+              .map((item) => ({
+                value: String(item.id),
+                label: `${item.id} - ${item.name} (Ton kho: ${item.quantity_in_stock})`,
+                quantity_in_stock: Number(item.quantity_in_stock ?? 0),
+              }))
           );
         }
 
@@ -177,7 +195,6 @@ export default function Settings() {
         expected_return_date: allocation.expected_return_date || null,
         purpose: allocation.purpose || null,
         note: allocation.note || null,
-        is_active: allocation.is_active,
       };
 
       if (
@@ -241,8 +258,8 @@ export default function Settings() {
     try {
       setDeletingId(allocation.id);
       const token = localStorage.getItem("access_token");
-      const res = await fetch(`${API_BASE_URL}/allocations/${allocation.id}/deactivate`, {
-        method: "PATCH",
+      const res = await fetch(`${API_BASE_URL}/allocations/${allocation.id}`, {
+        method: "DELETE",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
@@ -255,7 +272,7 @@ export default function Settings() {
 
       await fetchAllocations();
       toast({
-        title: "Allocation deactivated",
+        title: "Allocation deleted",
         status: "success",
       });
     } catch (error) {
@@ -291,12 +308,11 @@ export default function Settings() {
           expected_return_date: allocation.expected_return_date || null,
           purpose: allocation.purpose || null,
           note: allocation.note || null,
-          is_active: allocation.is_active,
         }),
       });
 
       if (!res.ok) {
-        throw new Error("Create allocation failed");
+        throw new Error(await getErrorMessage(res, "Create allocation failed"));
       }
 
       await fetchAllocations();
@@ -308,6 +324,7 @@ export default function Settings() {
       console.error("Create allocation failed:", error);
       toast({
         title: "Create allocation failed",
+        description: error.message,
         status: "error",
       });
       throw error;
@@ -321,6 +338,7 @@ export default function Settings() {
       <CheckTable
         tableData={tableData}
         assetOptions={assetOptions}
+        supplyOptions={supplyOptions}
         departmentOptions={departmentOptions}
         userOptions={userOptions}
         title={loading ? "Loading..." : "Allocations Table"}

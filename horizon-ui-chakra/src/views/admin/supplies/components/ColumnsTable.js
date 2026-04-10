@@ -167,7 +167,7 @@ export default function ColumnTable(props) {
       id: 'managed_department',
       header: () => (
         <Text justifyContent="space-between" align="center" fontSize={{ sm: '10px', lg: '12px' }} color="gray.400">
-          DEPARTMENT
+          ASSIGNED DEPARTMENT
         </Text>
       ),
       cell: (info) => (
@@ -175,33 +175,13 @@ export default function ColumnTable(props) {
           {info.getValue()}
         </Text>
       ),
-    }),
-    columnHelper.accessor('is_active', {
-      id: 'is_active',
-      header: () => (
-        <Text justifyContent="space-between" align="center" fontSize={{ sm: '10px', lg: '12px' }} color="gray.400">
-          IS_ACTIVE
-        </Text>
-      ),
-      cell: (info) => (
-        <Text color={textColor} fontSize="sm" fontWeight="700">
-          {info.getValue()}
-        </Text>
-      ),
-    }),
+    })
   ];
 
   const data = React.useMemo(() => tableData ?? [], [tableData]);
   const filteredData = React.useMemo(() => {
     const normalizedSearch = searchTerm.trim().toLowerCase();
-    const allowedStatuses = [];
 
-    if (filters.active) {
-      allowedStatuses.push('active');
-    }
-    if (filters.inactive) {
-      allowedStatuses.push('inactive');
-    }
 
     return data.filter((row) => {
       const matchesKeyword = !normalizedSearch
@@ -210,13 +190,10 @@ export default function ColumnTable(props) {
         );
       const matchesDepartment = !departmentFilter
         || String(row.managed_department_id ?? '') === departmentFilter;
-      const matchesActive = allowedStatuses.length === 0
-        ? true
-        : allowedStatuses.includes(String(row.is_active ?? '').toLowerCase());
 
-      return matchesKeyword && matchesDepartment && matchesActive;
+      return matchesKeyword && matchesDepartment;
     });
-  }, [data, departmentFilter, filters, searchTerm]);
+  }, [data, departmentFilter, searchTerm]);
   const isSubmitting = Boolean(selectedSupply && selectedSupply.id === onSaveSupply?.loadingId);
   const isDeleting = Boolean(selectedSupply && selectedSupply.id === onDeleteSupply?.loadingId);
   const isCreating = Boolean(onCreateSupply?.loading);
@@ -311,40 +288,7 @@ export default function ColumnTable(props) {
             >
               {addLabel}
             </Button>
-            <Menu>
-              <MenuButton
-                as={Button}
-                leftIcon={<Icon as={MdFilterList} boxSize={4} />}
-                bg={filterButtonBg}
-                _hover={{ bg: filterButtonHoverBg }}
-                _active={{ bg: filterButtonHoverBg }}
-                borderRadius="12px"
-                fontWeight="700"
-              >
-                Filter
-              </MenuButton>
-              <MenuList
-                minW="180px"
-                border="transparent"
-                bg={filterMenuBg}
-                boxShadow={filterMenuShadow}
-                borderRadius="16px"
-                p="10px"
-              >
-                <MenuItem borderRadius="10px" onClick={() => toggleFilter('active')}>
-                  <Flex w="100%" align="center" justifyContent="space-between">
-                    <Text>Active</Text>
-                    {filters.active && <Icon as={MdCheck} boxSize={4} />}
-                  </Flex>
-                </MenuItem>
-                <MenuItem borderRadius="10px" onClick={() => toggleFilter('inactive')}>
-                  <Flex w="100%" align="center" justifyContent="space-between">
-                    <Text>Inactive</Text>
-                    {filters.inactive && <Icon as={MdCheck} boxSize={4} />}
-                  </Flex>
-                </MenuItem>
-              </MenuList>
-            </Menu>
+            
           </Flex>
         </Flex>
         <Flex px="25px" mb="4px" gap="12px" flexDirection={{ base: 'column', md: 'row' }} wrap="wrap">

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, File, Query, UploadFile, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -15,10 +15,12 @@ from app.schemas.maintenance import (
 )
 from app.services.maintenance_service import (
     create_maintenance,
-    deactivate_maintenance,
+    delete_maintenance,
     get_maintenance_or_404,
     list_maintenances,
+    remove_maintenance_attachment,
     update_maintenance,
+    update_maintenance_attachment,
     update_maintenance_status,
 )
 
@@ -36,7 +38,6 @@ def read_maintenances(
     maintenance_type: MaintenanceType | None = Query(default=None),
     priority: MaintenancePriority | None = Query(default=None),
     status_filter: MaintenanceStatus | None = Query(default=None, alias="status"),
-    is_active: bool | None = Query(default=None),
     db: Session = Depends(get_db),
     _: User = Depends(require_roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.STAFF)),
 ):
@@ -51,7 +52,6 @@ def read_maintenances(
         maintenance_type=maintenance_type.value if maintenance_type is not None else None,
         priority=priority.value if priority is not None else None,
         status_filter=status_filter.value if status_filter is not None else None,
-        is_active=is_active,
     )
 
 
@@ -95,11 +95,32 @@ def update_existing_maintenance_status(
     return update_maintenance_status(db=db, maintenance=maintenance, payload=payload)
 
 
-@router.patch("/{maintenance_id}/deactivate", response_model=MaintenanceResponse)
-def deactivate_existing_maintenance(
+@router.delete("/{maintenance_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_existing_maintenance(
     maintenance_id: int,
     db: Session = Depends(get_db),
     _: User = Depends(require_roles(UserRole.ADMIN)),
 ):
     maintenance = get_maintenance_or_404(db=db, maintenance_id=maintenance_id)
-    return deactivate_maintenance(db=db, maintenance=maintenance)
+    delete_maintenance(db=db, maintenance=maintenance)
+
+
+@router.post("/{maintenance_id}/attachment", response_model=MaintenanceResponse)
+def upload_maintenance_attachment(
+    maintenance_id: int,
+    attachment: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    _: User = Depends(require_roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.STAFF)),
+):
+    maintenance = get_maintenance_or_404(db=db, maintenance_id=maintenance_id)
+    return update_maintenance_attachment(db=db, maintenance=maintenance, upload_file=attachment)
+
+
+@router.delete("/{maintenance_id}/attachment", response_model=MaintenanceResponse)
+def delete_maintenance_attachment(
+    maintenance_id: int,
+    db: Session = Depends(get_db),
+    _: User = Depends(require_roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.STAFF)),
+):
+    maintenance = get_maintenance_or_404(db=db, maintenance_id=maintenance_id)
+    return remove_maintenance_attachment(db=db, maintenance=maintenance)

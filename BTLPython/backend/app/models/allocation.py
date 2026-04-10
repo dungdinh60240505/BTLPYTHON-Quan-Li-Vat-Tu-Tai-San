@@ -34,7 +34,6 @@ class AllocationType(str, Enum):
 
 class AllocationStatus(str, Enum):
     ACTIVE = "active"
-    COMPLETED = "completed"
     RETURNED = "returned"
     CANCELLED = "cancelled"
 

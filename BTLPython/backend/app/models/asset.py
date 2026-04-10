@@ -6,7 +6,6 @@ from enum import Enum
 from typing import TYPE_CHECKING
 
 from sqlalchemy import (
-    Boolean,
     Date,
     DateTime,
     Enum as SqlEnum,
@@ -81,7 +80,6 @@ class Asset(Base):
 
     location: Mapped[str | None] = mapped_column(String(255), nullable=True)
     note: Mapped[str | None] = mapped_column(Text, nullable=True)
-    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
     assigned_department_id: Mapped[int | None] = mapped_column(
         ForeignKey("departments.id", ondelete="SET NULL"),

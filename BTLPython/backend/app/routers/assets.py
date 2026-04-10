@@ -10,7 +10,7 @@ from app.models.user import User, UserRole
 from app.schemas.asset import AssetCreate, AssetResponse, AssetStatusUpdate, AssetUpdate
 from app.services.asset_service import (
     create_asset,
-    deactivate_asset,
+    delete_asset,
     get_asset_or_404,
     list_assets,
     update_asset,
@@ -30,7 +30,6 @@ def read_assets(
     condition_filter: AssetCondition | None = Query(default=None, alias="condition"),
     assigned_department_id: int | None = Query(default=None, ge=1),
     assigned_user_id: int | None = Query(default=None, ge=1),
-    is_active: bool | None = Query(default=None),
     db: Session = Depends(get_db),
     _: User = Depends(require_roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.STAFF)),
 ):
@@ -44,7 +43,6 @@ def read_assets(
         condition_filter=condition_filter.value if condition_filter is not None else None,
         assigned_department_id=assigned_department_id,
         assigned_user_id=assigned_user_id,
-        is_active=is_active,
     )
 
 
@@ -88,11 +86,11 @@ def update_existing_asset_status(
     return update_asset_status(db=db, asset=asset, payload=payload)
 
 
-@router.patch("/{asset_id}/deactivate", response_model=AssetResponse)
-def deactivate_existing_asset(
+@router.delete("/{asset_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_existing_asset(
     asset_id: int,
     db: Session = Depends(get_db),
     _: User = Depends(require_roles(UserRole.ADMIN)),
 ):
     asset = get_asset_or_404(db=db, asset_id=asset_id)
-    return deactivate_asset(db=db, asset=asset)
+    delete_asset(db=db, asset=asset)

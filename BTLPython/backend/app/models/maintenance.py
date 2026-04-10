@@ -6,11 +6,11 @@ from enum import Enum
 from typing import TYPE_CHECKING
 
 from sqlalchemy import (
-    Boolean,
     Date,
     DateTime,
     Enum as SqlEnum,
     ForeignKey,
+    Integer,
     Numeric,
     String,
     Text,
@@ -117,6 +117,11 @@ class Maintenance(Base):
     cost: Mapped[Decimal | None] = mapped_column(Numeric(15, 2), nullable=True)
     vendor_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     resolution_note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    attachment_original_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    attachment_stored_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    attachment_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    attachment_mime_type: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    attachment_size: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     reported_by_user_id: Mapped[int | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"),
@@ -126,8 +131,6 @@ class Maintenance(Base):
         ForeignKey("users.id", ondelete="SET NULL"),
         nullable=True,
     )
-
-    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

@@ -1,6 +1,6 @@
 import React from "react";
 import {
-  Badge,
+  Tag,
   Button,
   FormControl,
   FormLabel,
@@ -13,22 +13,22 @@ import {
   ModalHeader,
   ModalOverlay,
   Select,
+  Switch,
   SimpleGrid,
   Stack,
-  Switch,
   useColorModeValue,
 } from "@chakra-ui/react";
 
 const initialFormData = {
   username: "",
   email: "",
+  is_active: true,
   full_name: "",
   phone_number: "",
   role: "staff",
   department_id: "",
   password: "",
   confirm_password: "",
-  is_active: true,
 };
 
 export default function UserModal(props) {
@@ -65,10 +65,10 @@ export default function UserModal(props) {
       full_name: user.full_name || "",
       phone_number: user.phone_number || "",
       role: user.role || "staff",
+      is_active: user.is_active ?? true,
       department_id: user.department_id ?? "",
       password: "",
       confirm_password: "",
-      is_active: Boolean(user.is_active_raw ?? user.is_active === "Active"),
     });
     setIsEditing(false);
   }, [user, isCreateMode, isOpen]);
@@ -85,6 +85,7 @@ export default function UserModal(props) {
       full_name: formData.full_name.trim(),
       phone_number: formData.phone_number.trim(),
       role: formData.role,
+      is_active: formData.is_active,
       department_id: formData.department_id === "" ? null : Number(formData.department_id),
       ...(isCreateMode
         ? {
@@ -92,19 +93,11 @@ export default function UserModal(props) {
             confirm_password: formData.confirm_password,
           }
         : {}),
-      is_active: formData.is_active,
     });
     if (!isCreateMode) setIsEditing(false);
   };
 
   if (!isCreateMode && !user) return null;
-
-  const isUserActive =
-    typeof user?.is_active_raw === "boolean"
-      ? user.is_active_raw
-      : typeof user?.is_active === "string"
-        ? user.is_active === "Active"
-        : Boolean(user?.is_active);
 
   const readOnlyFieldProps = {
     isReadOnly: true,
@@ -121,11 +114,6 @@ export default function UserModal(props) {
         <ModalHeader>{isCreateMode ? "Add User" : "User Detail"}</ModalHeader>
         <ModalCloseButton />
         <ModalBody>
-          {!isCreateMode && !isEditing && (
-            <Badge colorScheme={isUserActive ? "green" : "red"} px="12px" py="6px" mb={4} borderRadius="full" textTransform="none" fontSize="sm">
-              {isUserActive ? "Active" : "Inactive"}
-            </Badge>
-          )}
           {isCreateMode || isEditing ? (
             <Stack spacing={4}>
               <FormControl isRequired>
@@ -152,6 +140,13 @@ export default function UserModal(props) {
                   <option value="staff">staff</option>
                 </Select>
               </FormControl>
+              <FormControl display="flex" alignItems="center" justifyContent="space-between">
+                <FormLabel mb="0">Active</FormLabel>
+                <Switch
+                  isChecked={!!formData.is_active}
+                  onChange={(e) => handleChange("is_active", e.target.checked)}
+                />
+            </FormControl>
               {isCreateMode ? (
                 <FormControl>
                   <FormLabel>Department ID</FormLabel>
@@ -181,12 +176,9 @@ export default function UserModal(props) {
                   </FormControl>
                 </>
               )}
-              <FormControl display="flex" alignItems="center" gap={3}>
-                <FormLabel mb="0">Active</FormLabel>
-                <Switch isChecked={formData.is_active} onChange={(e) => handleChange("is_active", e.target.checked)} />
-              </FormControl>
             </Stack>
           ) : (
+            
             <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
               <FormControl><FormLabel>ID</FormLabel><Input value={user.id || ""} {...readOnlyFieldProps} /></FormControl>
               <FormControl><FormLabel>Username</FormLabel><Input value={user.username || ""} {...readOnlyFieldProps} /></FormControl>
@@ -198,7 +190,13 @@ export default function UserModal(props) {
               <FormControl><FormLabel>Department ID</FormLabel><Input value={user.department_id ?? ""} {...readOnlyFieldProps} /></FormControl>
               <FormControl><FormLabel>Created at</FormLabel><Input value={user.created_at || ""} {...readOnlyFieldProps} /></FormControl>
               <FormControl><FormLabel>Updated at</FormLabel><Input value={user.updated_at || ""} {...readOnlyFieldProps} /></FormControl>
+              <FormControl>
+                <Tag colorScheme={user.is_active ? "green" : "red"}>
+                  {user.is_active ? "Active" : "Inactive"}
+                </Tag>
+              </FormControl>
             </SimpleGrid>
+            
           )}
         </ModalBody>
         <ModalFooter gap={3}>

@@ -129,7 +129,7 @@ function SignIn() {
           mx={{ base: "auto", lg: "unset" }}
           me='auto'
           mb={{ base: "20px", md: "auto" }}>
-          <Button
+          {/* <Button
             fontSize='sm'
             me='0px'
             mb='26px'
@@ -151,7 +151,7 @@ function SignIn() {
               or
             </Text>
             <HSeparator />
-          </Flex>
+          </Flex> */}
           <FormControl>
             <FormLabel
               display='flex'
@@ -168,7 +168,7 @@ function SignIn() {
               variant='auth'
               fontSize='sm'
               ms={{ base: "0px", md: "0px" }}
-              placeholder='mail@simmmple.com'
+              placeholder='Your username'
               mb='24px'
               fontWeight='500'
               size='lg'
@@ -202,7 +202,7 @@ function SignIn() {
               </InputRightElement>
             </InputGroup>
             <Flex justifyContent='space-between' align='center' mb='24px'>
-              <FormControl display='flex' alignItems='center'>
+              {/* <FormControl display='flex' alignItems='center'>
                 <Checkbox
                   id='remember-login'
                   colorScheme='brandScheme'
@@ -216,7 +216,7 @@ function SignIn() {
                   fontSize='sm'>
                   Keep me logged in
                 </FormLabel>
-              </FormControl>
+              </FormControl> */}
               <NavLink to='/auth/forgot-password'>
                 <Text
                   color={textColorBrand}
@@ -238,7 +238,7 @@ function SignIn() {
               Sign In
             </Button>
           </FormControl>
-          <Flex
+          {/* <Flex
             flexDirection='column'
             justifyContent='center'
             alignItems='start'
@@ -256,7 +256,7 @@ function SignIn() {
                 </Text>
               </NavLink>
             </Text>
-          </Flex>
+          </Flex> */}
         </Flex>
       </Flex>
       </form>

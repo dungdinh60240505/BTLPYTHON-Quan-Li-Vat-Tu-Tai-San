@@ -54,8 +54,6 @@ export default function Settings() {
             note: item.note,
             managed_department_id: item.managed_department_id,
             managed_department: item.managed_department?.name,
-            is_active: item.is_active ? "Active" : "Inactive",
-            is_active_raw: item.is_active,
             created_at: new Date(item.created_at).toLocaleString("vi-VN"),
             updated_at: new Date(item.updated_at).toLocaleString("vi-VN"),
           }))
@@ -127,7 +125,6 @@ export default function Settings() {
           description: supply.description || null,
           note: supply.note || null,
           managed_department_id: supply.managed_department_id,
-          is_active: supply.is_active,
         }),
       });
 
@@ -156,8 +153,8 @@ export default function Settings() {
     try {
       setDeletingId(supply.id);
       const token = localStorage.getItem("access_token");
-      const res = await fetch(`http://127.0.0.1:8000/api/v1/supplies/${supply.id}/deactivate`, {
-        method: "PATCH",
+      const res = await fetch(`http://127.0.0.1:8000/api/v1/supplies/${supply.id}`, {
+        method: "DELETE",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`
@@ -170,7 +167,7 @@ export default function Settings() {
 
       await fetchSupplies();
       toast({
-        title: "Supply deactivated",
+        title: "Supply deleted",
         status: "success",
       });
     } catch (error) {
@@ -207,7 +204,6 @@ export default function Settings() {
           description: supply.description || null,
           note: supply.note || null,
           managed_department_id: supply.managed_department_id,
-          is_active: supply.is_active,
         }),
       });
 

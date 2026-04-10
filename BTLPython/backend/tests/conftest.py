@@ -68,7 +68,6 @@ def admin_user(db_session: Session) -> User:
         hashed_password=get_password_hash("Admin@123"),
         role=UserRole.ADMIN,
         department_id=department.id,
-        is_active=True,
     )
     db_session.add(user)
     db_session.commit()

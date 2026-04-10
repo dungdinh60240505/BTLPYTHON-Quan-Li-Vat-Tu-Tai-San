@@ -18,13 +18,13 @@ def get_user_by_id(db: Session, user_id: int) -> User | None:
     )
     return db.scalar(statement)
 
-
-
 def get_user_by_username(db: Session, username: str) -> User | None:
     statement = select(User).where(User.username == username)
     return db.scalar(statement)
 
-
+def get_all_inactive_users(db: Session) -> list[User]:
+    statement = select(User).where(User.is_active.is_(False))
+    return list(db.scalars(statement).all())
 
 def get_user_by_email(db: Session, email: str) -> User | None:
     statement = select(User).where(User.email == email)
@@ -40,7 +40,6 @@ def list_users(
     keyword: str | None = None,
     department_id: int | None = None,
     role: str | None = None,
-    is_active: bool | None = None,
 ) -> list[User]:
     statement = (
         select(User)
@@ -65,9 +64,6 @@ def list_users(
 
     if role is not None:
         statement = statement.where(User.role == role)
-
-    if is_active is not None:
-        statement = statement.where(User.is_active == is_active)
 
     return list(db.scalars(statement).all())
 
@@ -104,7 +100,6 @@ def create_user(db: Session, payload: UserCreate) -> User:
         avatar_url=payload.avatar_url.strip() if payload.avatar_url else None,
         role=payload.role,
         department_id=department_id,
-        is_active=payload.is_active,
         hashed_password=get_password_hash(payload.password),
     )
 
@@ -164,6 +159,9 @@ def update_user(db: Session, user: User, payload: UserUpdate) -> User:
     if "role" in update_data and update_data["role"] is not None:
         user.role = update_data["role"]
 
+    if "is_active" in update_data and update_data["is_active"] is not None:
+        user.is_active = update_data["is_active"]
+
     if "department_id" in update_data:
         department_id = update_data["department_id"]
         if department_id is not None:
@@ -175,9 +173,6 @@ def update_user(db: Session, user: User, payload: UserUpdate) -> User:
                 )
         user.department_id = department_id
 
-    if "is_active" in update_data and update_data["is_active"] is not None:
-        user.is_active = update_data["is_active"]
-
     db.add(user)
     db.commit()
     db.refresh(user)
@@ -185,21 +180,9 @@ def update_user(db: Session, user: User, payload: UserUpdate) -> User:
 
 
 
-def deactivate_user(db: Session, user: User) -> User:
-    user.is_active = False
-    db.add(user)
+def delete_user(db: Session, user: User) -> None:
+    db.delete(user)
     db.commit()
-    db.refresh(user)
-    return get_user_or_404(db=db, user_id=user.id)
-
-
-
-def activate_user(db: Session, user: User) -> User:
-    user.is_active = True
-    db.add(user)
-    db.commit()
-    db.refresh(user)
-    return get_user_or_404(db=db, user_id=user.id)
 
 
 def update_user_avatar(db: Session, user: User, avatar_url: str | None) -> User:

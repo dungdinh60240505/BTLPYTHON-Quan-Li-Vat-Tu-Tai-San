@@ -66,4 +66,3 @@ class AuthenticatedUser(BaseModel):
     role: UserRole
     department_id: int | None = None
     department: DepartmentSimple | None = None
-    is_active: bool

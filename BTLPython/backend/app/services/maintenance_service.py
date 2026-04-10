@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from fastapi import HTTPException, status
+from fastapi import HTTPException, UploadFile, status
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session, selectinload
 
@@ -14,6 +14,7 @@ from app.schemas.maintenance import (
     MaintenanceStatusUpdate,
     MaintenanceUpdate,
 )
+from app.utils.file_storage import delete_local_maintenance_attachment, save_maintenance_attachment
 
 
 ACTIVE_MAINTENANCE_STATUSES = {
@@ -57,7 +58,6 @@ def list_maintenances(
     maintenance_type: str | None = None,
     priority: str | None = None,
     status_filter: str | None = None,
-    is_active: bool | None = None,
 ) -> list[Maintenance]:
     statement = (
         select(Maintenance)
@@ -100,9 +100,6 @@ def list_maintenances(
     if status_filter is not None:
         statement = statement.where(Maintenance.status == status_filter)
 
-    if is_active is not None:
-        statement = statement.where(Maintenance.is_active == is_active)
-
     return list(db.scalars(statement).all())
 
 
@@ -112,11 +109,6 @@ def _validate_asset_exists(db: Session, asset_id: int) -> Asset:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Asset not found",
-        )
-    if not asset.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Asset is inactive",
         )
     return asset
 
@@ -186,7 +178,6 @@ def create_maintenance(db: Session, payload: MaintenanceCreate, current_user: Us
         resolution_note=payload.resolution_note.strip() if payload.resolution_note else None,
         reported_by_user_id=current_user.id,
         assigned_to_user_id=assigned_to_user_id,
-        is_active=payload.is_active,
     )
 
     if payload.status == MaintenanceStatus.IN_PROGRESS:
@@ -253,9 +244,6 @@ def update_maintenance(db: Session, maintenance: Maintenance, payload: Maintenan
             field_name="Assigned user",
         )
 
-    if "is_active" in update_data and update_data["is_active"] is not None:
-        maintenance.is_active = update_data["is_active"]
-
     db.add(maintenance)
     db.commit()
     db.refresh(maintenance)
@@ -310,8 +298,51 @@ def update_maintenance_status(
     return get_maintenance_or_404(db=db, maintenance_id=maintenance.id)
 
 
-def deactivate_maintenance(db: Session, maintenance: Maintenance) -> Maintenance:
-    maintenance.is_active = False
+def delete_maintenance(db: Session, maintenance: Maintenance) -> None:
+    asset = db.get(Asset, maintenance.asset_id)
+    if asset is not None and maintenance.status in ACTIVE_MAINTENANCE_STATUSES:
+        if asset.status == AssetStatus.UNDER_MAINTENANCE:
+            asset.status = AssetStatus.AVAILABLE
+            db.add(asset)
+
+    delete_local_maintenance_attachment(maintenance.attachment_url)
+    db.delete(maintenance)
+    db.commit()
+
+
+def update_maintenance_attachment(
+    db: Session,
+    maintenance: Maintenance,
+    *,
+    upload_file: UploadFile,
+) -> Maintenance:
+    attachment_data = save_maintenance_attachment(
+        upload_file=upload_file,
+        maintenance_id=maintenance.id,
+    )
+    previous_attachment_url = maintenance.attachment_url
+
+    maintenance.attachment_original_name = attachment_data["original_name"]
+    maintenance.attachment_stored_name = attachment_data["stored_name"]
+    maintenance.attachment_url = attachment_data["url"]
+    maintenance.attachment_mime_type = attachment_data["mime_type"]
+    maintenance.attachment_size = attachment_data["size"]
+
+    db.add(maintenance)
+    db.commit()
+    db.refresh(maintenance)
+
+    delete_local_maintenance_attachment(previous_attachment_url)
+    return get_maintenance_or_404(db=db, maintenance_id=maintenance.id)
+
+
+def remove_maintenance_attachment(db: Session, maintenance: Maintenance) -> Maintenance:
+    delete_local_maintenance_attachment(maintenance.attachment_url)
+    maintenance.attachment_original_name = None
+    maintenance.attachment_stored_name = None
+    maintenance.attachment_url = None
+    maintenance.attachment_mime_type = None
+    maintenance.attachment_size = None
     db.add(maintenance)
     db.commit()
     db.refresh(maintenance)

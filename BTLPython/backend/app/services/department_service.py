@@ -31,12 +31,8 @@ def list_departments(
     *,
     skip: int = 0,
     limit: int = 100,
-    is_active: bool | None = None,
 ) -> list[Department]:
     statement = select(Department).offset(skip).limit(limit).order_by(Department.id.desc())
-
-    if is_active is not None:
-        statement = statement.where(Department.is_active == is_active)
 
     return list(db.scalars(statement).all())
 
@@ -60,7 +56,6 @@ def create_department(db: Session, payload: DepartmentCreate) -> Department:
         code=payload.code.strip(),
         name=payload.name.strip(),
         description=payload.description.strip() if payload.description else None,
-        is_active=payload.is_active,
     )
     db.add(department)
     db.commit()
@@ -111,9 +106,6 @@ def update_department(
             update_data["description"].strip() if update_data["description"] else None
         )
 
-    if "is_active" in update_data and update_data["is_active"] is not None:
-        department.is_active = update_data["is_active"]
-
     db.add(department)
     db.commit()
     db.refresh(department)
@@ -121,12 +113,9 @@ def update_department(
 
 
 
-def deactivate_department(db: Session, department: Department) -> Department:
-    department.is_active = False
-    db.add(department)
+def delete_department(db: Session, department: Department) -> None:
+    db.delete(department)
     db.commit()
-    db.refresh(department)
-    return department
 
 
 

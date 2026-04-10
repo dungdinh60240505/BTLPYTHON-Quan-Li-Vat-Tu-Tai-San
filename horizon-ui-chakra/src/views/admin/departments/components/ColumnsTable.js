@@ -112,24 +112,6 @@ export default function ColumnTable(props) {
         </Text>
       ),
     }),
-    columnHelper.accessor('is_active', {
-      id: 'is_active',
-      header: () => (
-        <Text
-          justifyContent="space-between"
-          align="center"
-          fontSize={{ sm: '10px', lg: '12px' }}
-          color="gray.400"
-        >
-          IS_ACTIVE
-        </Text>
-      ),
-      cell: (info) => (
-        <Text color={textColor} fontSize="sm" fontWeight="700">
-          {info.getValue()}
-        </Text>
-      ),
-    }),
     columnHelper.accessor('created_at', {
       id: 'created_at',
       header: () => (

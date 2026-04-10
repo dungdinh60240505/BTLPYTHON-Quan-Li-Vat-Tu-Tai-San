@@ -50,8 +50,6 @@ export default function Settings() {
             role: item.role,
             department_id: item.department_id,
             department: item.department?.name,
-            is_active: item.is_active ? "Active" : "Inactive",
-            is_active_raw: item.is_active,
             created_at: new Date(item.created_at).toLocaleString("vi-VN"),
             updated_at: new Date(item.updated_at).toLocaleString("vi-VN"),
           }))
@@ -118,7 +116,6 @@ export default function Settings() {
           phone_number: user.phone_number || null,
           role: user.role,
           department_id: user.department_id,
-          is_active: user.is_active,
         }),
       });
 
@@ -147,8 +144,8 @@ export default function Settings() {
     try {
       setDeletingId(user.id);
       const token = localStorage.getItem("access_token");
-      const res = await fetch(`http://127.0.0.1:8000/api/v1/users/${user.id}/deactivate`, {
-        method: "PATCH",
+      const res = await fetch(`http://127.0.0.1:8000/api/v1/users/${user.id}`, {
+        method: "DELETE",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`
@@ -161,7 +158,7 @@ export default function Settings() {
 
       await fetchUsers();
       toast({
-        title: "User deactivated",
+        title: "User deleted",
         status: "success",
       });
     } catch (error) {
@@ -195,7 +192,6 @@ export default function Settings() {
           department_id: user.department_id,
           password: user.password,
           confirm_password: user.confirm_password,
-          is_active: user.is_active,
         }),
       });
 

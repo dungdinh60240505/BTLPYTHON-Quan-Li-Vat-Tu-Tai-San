@@ -40,7 +40,9 @@ class Settings(BaseSettings):
     BACKEND_DIR: Path = Path(__file__).resolve().parents[2]
     UPLOADS_DIR: Path = BACKEND_DIR / "uploads"
     AVATAR_UPLOAD_DIR: Path = UPLOADS_DIR / "avatars"
+    MAINTENANCE_UPLOAD_DIR: Path = UPLOADS_DIR / "maintenances"
     MAX_AVATAR_SIZE_BYTES: int = 2 * 1024 * 1024
+    MAX_MAINTENANCE_FILE_SIZE_BYTES: int = 10 * 1024 * 1024
 
 
 @lru_cache
