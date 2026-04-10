@@ -1,6 +1,5 @@
 import React from "react";
 import {
-  Badge,
   Button,
   FormControl,
   FormLabel,
@@ -15,7 +14,6 @@ import {
   Select,
   SimpleGrid,
   Stack,
-  Switch,
   Textarea,
   useColorModeValue,
 } from "@chakra-ui/react";
@@ -32,7 +30,6 @@ const initialFormData = {
   description: "",
   note: "",
   managed_department_id: "",
-  is_active: true,
 };
 
 export default function SupplyModal(props) {
@@ -75,7 +72,6 @@ export default function SupplyModal(props) {
       description: supply.description || "",
       note: supply.note || "",
       managed_department_id: supply.managed_department_id ?? "",
-      is_active: Boolean(supply.is_active_raw ?? supply.is_active === "Active"),
     });
     setIsEditing(false);
   }, [supply, isCreateMode, isOpen]);
@@ -98,19 +94,11 @@ export default function SupplyModal(props) {
       description: formData.description.trim(),
       note: formData.note.trim(),
       managed_department_id: formData.managed_department_id === "" ? null : Number(formData.managed_department_id),
-      is_active: formData.is_active,
     });
     if (!isCreateMode) setIsEditing(false);
   };
 
   if (!isCreateMode && !supply) return null;
-
-  const isSupplyActive =
-    typeof supply?.is_active_raw === "boolean"
-      ? supply.is_active_raw
-      : typeof supply?.is_active === "string"
-        ? supply.is_active === "Active"
-        : Boolean(supply?.is_active);
 
   const readOnlyFieldProps = {
     isReadOnly: true,
@@ -127,11 +115,6 @@ export default function SupplyModal(props) {
         <ModalHeader>{isCreateMode ? "Add Supply" : "Supply Detail"}</ModalHeader>
         <ModalCloseButton />
         <ModalBody>
-          {!isCreateMode && !isEditing && (
-            <Badge colorScheme={isSupplyActive ? "green" : "red"} px="12px" py="6px" mb={4} borderRadius="full" textTransform="none" fontSize="sm">
-              {isSupplyActive ? "Active" : "Inactive"}
-            </Badge>
-          )}
           {isCreateMode || isEditing ? (
             <Stack spacing={4}>
               <FormControl isRequired><FormLabel>Code</FormLabel><Input value={formData.supply_code} onChange={(e) => handleChange("supply_code", e.target.value)} /></FormControl>
@@ -158,7 +141,6 @@ export default function SupplyModal(props) {
               ) : (
                 <FormControl><FormLabel>Managed Department ID</FormLabel><Input type="number" value={formData.managed_department_id} onChange={(e) => handleChange("managed_department_id", e.target.value)} /></FormControl>
               )}
-              <FormControl display="flex" alignItems="center" gap={3}><FormLabel mb="0">Active</FormLabel><Switch isChecked={formData.is_active} onChange={(e) => handleChange("is_active", e.target.checked)} /></FormControl>
             </Stack>
           ) : (
             <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>

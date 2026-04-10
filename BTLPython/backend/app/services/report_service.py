@@ -21,29 +21,16 @@ from app.schemas.report import (
 )
 
 
+
 def get_dashboard_summary(db: Session) -> DashboardSummary:
     total_departments = db.scalar(select(func.count(Department.id))) or 0
     total_users = db.scalar(select(func.count(User.id))) or 0
     total_assets = db.scalar(select(func.count(Asset.id))) or 0
     total_supplies = db.scalar(select(func.count(Supply.id))) or 0
-    active_allocations = db.scalar(
-        select(func.count(Allocation.id)).where(
-            Allocation.is_active.is_(True),
-            Allocation.status == AllocationStatus.ACTIVE,
-        )
-    ) or 0
-    active_maintenances = db.scalar(
-        select(func.count(Maintenance.id)).where(
-            Maintenance.is_active.is_(True),
-            Maintenance.status.in_([
-                MaintenanceStatus.SCHEDULED,
-                MaintenanceStatus.IN_PROGRESS,
-            ]),
-        )
-    ) or 0
+    active_allocations = db.scalar(select(func.count(Allocation.id))) or 0
+    active_maintenances = db.scalar(select(func.count(Maintenance.id))) or 0
     low_stock_supplies = db.scalar(
         select(func.count(Supply.id)).where(
-            Supply.is_active.is_(True),
             Supply.quantity_in_stock <= Supply.minimum_stock_level,
         )
     ) or 0
@@ -63,7 +50,6 @@ def get_dashboard_summary(db: Session) -> DashboardSummary:
 def get_asset_status_summary(db: Session) -> list[AssetStatusSummaryItem]:
     rows = db.execute(
         select(Asset.status, func.count(Asset.id))
-        .where(Asset.is_active.is_(True))
         .group_by(Asset.status)
         .order_by(Asset.status)
     ).all()
@@ -75,7 +61,6 @@ def get_low_stock_supplies(db: Session) -> list[LowStockSupplyItem]:
         select(Supply, Department.name)
         .outerjoin(Department, Supply.managed_department_id == Department.id)
         .where(
-            Supply.is_active.is_(True),
             Supply.quantity_in_stock <= Supply.minimum_stock_level,
         )
         .order_by(Supply.quantity_in_stock.asc(), Supply.id.desc())
@@ -112,7 +97,6 @@ def get_allocation_status_summary(db: Session) -> list[AllocationStatusSummaryIt
 def get_maintenance_status_summary(db: Session) -> list[MaintenanceStatusSummaryItem]:
     rows = db.execute(
         select(Maintenance.status, func.count(Maintenance.id))
-        .where(Maintenance.is_active.is_(True))
         .group_by(Maintenance.status)
         .order_by(Maintenance.status)
     ).all()
@@ -122,19 +106,16 @@ def get_maintenance_status_summary(db: Session) -> list[MaintenanceStatusSummary
 def get_recent_activity(db: Session, *, limit: int = 10) -> list[RecentActivityItem]:
     asset_rows = db.execute(
         select(Asset.asset_code, Asset.name, Asset.status, Asset.updated_at)
-        .where(Asset.is_active.is_(True))
         .order_by(Asset.updated_at.desc())
         .limit(limit)
     ).all()
     supply_rows = db.execute(
         select(Supply.supply_code, Supply.name, Supply.quantity_in_stock, Supply.updated_at)
-        .where(Supply.is_active.is_(True))
         .order_by(Supply.updated_at.desc())
         .limit(limit)
     ).all()
     maintenance_rows = db.execute(
         select(Maintenance.maintenance_code, Maintenance.title, Maintenance.status, Maintenance.updated_at)
-        .where(Maintenance.is_active.is_(True))
         .order_by(Maintenance.updated_at.desc())
         .limit(limit)
     ).all()

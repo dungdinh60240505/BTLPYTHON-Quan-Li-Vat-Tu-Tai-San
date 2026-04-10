@@ -1,6 +1,5 @@
 import React from "react";
 import {
-  Badge,
   Button,
   SimpleGrid,
   FormControl,
@@ -15,7 +14,6 @@ import {
   ModalOverlay,
   Select,
   Stack,
-  Switch,
   Textarea,
   useColorModeValue,
 } from "@chakra-ui/react";
@@ -34,7 +32,6 @@ const initialFormData = {
   note: "",
   assigned_department_id: "",
   assigned_user_id: "",
-  is_active: true,
 };
 
 export default function AssetModal(props) {
@@ -80,7 +77,6 @@ export default function AssetModal(props) {
       note: asset.note || "",
       assigned_department_id: asset.assigned_department_id ?? "",
       assigned_user_id: asset.assigned_user_id ?? "",
-      is_active: Boolean(asset.is_active_raw ?? asset.is_active === "Active"),
     });
     setIsEditing(false);
   }, [asset, isCreateMode, isOpen]);
@@ -115,13 +111,6 @@ export default function AssetModal(props) {
     borderColor: readOnlyBorderColor,
     bg: readOnlyBg,
   };
-  const isAssetActive =
-    typeof asset?.is_active_raw === "boolean"
-      ? asset.is_active_raw
-      : typeof asset?.is_active === "string"
-        ? asset.is_active === "Active"
-        : Boolean(asset?.is_active);
-
   return (
     <Modal isOpen={isOpen} onClose={onClose} isCentered size="lg">
       <ModalOverlay bg="blackAlpha.600" />
@@ -129,11 +118,6 @@ export default function AssetModal(props) {
         <ModalHeader>{isCreateMode ? "Add Asset" : "Asset Detail"}</ModalHeader>
         <ModalCloseButton />
         <ModalBody>
-          {!isCreateMode && !isEditing && (
-            <Badge colorScheme={isAssetActive ? "green" : "red"} px="12px" py="6px" mb={4} borderRadius="full" textTransform="none" fontSize="sm">
-              {isAssetActive ? "Active" : "Inactive"}
-            </Badge>
-          )}
           {isCreateMode || isEditing ? (
             <Stack spacing={4}>
               <FormControl isRequired><FormLabel>Code</FormLabel><Input value={formData.code} onChange={(e) => handleChange("code", e.target.value)} /></FormControl>
@@ -175,7 +159,6 @@ export default function AssetModal(props) {
                   ))}
                 </Select>
               </FormControl>
-              <FormControl display="flex" alignItems="center" gap={3}><FormLabel mb="0">Active</FormLabel><Switch isChecked={formData.is_active} onChange={(e) => handleChange("is_active", e.target.checked)} /></FormControl>
             </Stack>
           ) : (
             <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>

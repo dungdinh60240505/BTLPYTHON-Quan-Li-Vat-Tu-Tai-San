@@ -55,3 +55,36 @@ def ensure_runtime_schema() -> None:
     if "avatar_url" not in user_columns:
         with engine.begin() as connection:
             connection.execute(text("ALTER TABLE users ADD COLUMN avatar_url VARCHAR(500)"))
+
+    if inspector.has_table("allocations"):
+        with engine.begin() as connection:
+            connection.execute(
+                text(
+                    """
+                    UPDATE allocations
+                    SET status = 'returned'
+                    WHERE status = 'completed'
+                    """
+                )
+            )
+
+    if not inspector.has_table("maintenances"):
+        return
+
+    maintenance_columns = {column["name"] for column in inspector.get_columns("maintenances")}
+    maintenance_attachment_columns = {
+        "attachment_original_name": "ALTER TABLE maintenances ADD COLUMN attachment_original_name VARCHAR(255)",
+        "attachment_stored_name": "ALTER TABLE maintenances ADD COLUMN attachment_stored_name VARCHAR(255)",
+        "attachment_url": "ALTER TABLE maintenances ADD COLUMN attachment_url VARCHAR(500)",
+        "attachment_mime_type": "ALTER TABLE maintenances ADD COLUMN attachment_mime_type VARCHAR(100)",
+        "attachment_size": "ALTER TABLE maintenances ADD COLUMN attachment_size INTEGER",
+    }
+    missing_maintenance_columns = {
+        column_name: statement
+        for column_name, statement in maintenance_attachment_columns.items()
+        if column_name not in maintenance_columns
+    }
+    if missing_maintenance_columns:
+        with engine.begin() as connection:
+            for statement in missing_maintenance_columns.values():
+                connection.execute(text(statement))

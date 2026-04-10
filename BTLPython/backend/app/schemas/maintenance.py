@@ -36,7 +36,6 @@ class MaintenanceBase(BaseModel):
     vendor_name: str | None = Field(default=None, max_length=255)
     resolution_note: str | None = Field(default=None, max_length=3000)
     assigned_to_user_id: int | None = Field(default=None, ge=1)
-    is_active: bool = True
 
 
 class MaintenanceCreate(MaintenanceBase):
@@ -57,7 +56,6 @@ class MaintenanceUpdate(BaseModel):
     vendor_name: str | None = Field(default=None, max_length=255)
     resolution_note: str | None = Field(default=None, max_length=3000)
     assigned_to_user_id: int | None = Field(default=None, ge=1)
-    is_active: bool | None = None
 
 
 class MaintenanceStatusUpdate(BaseModel):
@@ -87,11 +85,15 @@ class MaintenanceResponse(BaseModel):
     cost: Decimal | None = None
     vendor_name: str | None = None
     resolution_note: str | None = None
+    attachment_original_name: str | None = None
+    attachment_stored_name: str | None = None
+    attachment_url: str | None = None
+    attachment_mime_type: str | None = None
+    attachment_size: int | None = None
     reported_by_user_id: int | None = None
     assigned_to_user_id: int | None = None
     asset: MaintenanceAssetReference
     reported_by_user: UserSimple | None = None
     assigned_to_user: UserSimple | None = None
-    is_active: bool
     created_at: datetime
     updated_at: datetime

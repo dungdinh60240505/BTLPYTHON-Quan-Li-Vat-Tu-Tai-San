@@ -12,9 +12,22 @@ import React, { useCallback, useEffect, useState } from "react";
 import ColumnsTable from "views/admin/maintenances/components/ColumnsTable";
 
 const API_BASE_URL = "http://127.0.0.1:8000/api/v1";
+const BACKEND_BASE_URL = "http://127.0.0.1:8000";
 
 const formatDateTime = (value) => (value ? new Date(value).toLocaleString("vi-VN") : "-");
 const formatDate = (value) => (value ? new Date(value).toLocaleDateString("vi-VN") : "-");
+const resolveFileUrl = (fileUrl) => {
+  if (!fileUrl) {
+    return null;
+  }
+
+  if (fileUrl.startsWith("http://") || fileUrl.startsWith("https://")) {
+    return fileUrl;
+  }
+
+  return `${BACKEND_BASE_URL}${fileUrl}`;
+};
+
 const getErrorMessage = async (res, fallbackMessage) => {
   try {
     const data = await res.json();
@@ -36,6 +49,40 @@ export default function Maintenances() {
   const [creating, setCreating] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
   const toast = useToast();
+
+  const uploadMaintenanceAttachment = useCallback(async (maintenanceId, file, token) => {
+    if (!file) {
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("attachment", file);
+
+    const response = await fetch(`${API_BASE_URL}/maintenances/${maintenanceId}/attachment`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      throw new Error(await getErrorMessage(response, "Upload maintenance attachment failed"));
+    }
+  }, []);
+
+  const removeMaintenanceAttachment = useCallback(async (maintenanceId, token) => {
+    const response = await fetch(`${API_BASE_URL}/maintenances/${maintenanceId}/attachment`, {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(await getErrorMessage(response, "Delete maintenance attachment failed"));
+    }
+  }, []);
 
   const fetchMaintenances = useCallback(async () => {
     try {
@@ -74,9 +121,14 @@ export default function Maintenances() {
             cost: item.cost,
             vendor_name: item.vendor_name,
             resolution_note: item.resolution_note,
+            attachment_original_name: item.attachment_original_name,
+            attachment_stored_name: item.attachment_stored_name,
+            attachment_url: item.attachment_url,
+            attachment_href: resolveFileUrl(item.attachment_url),
+            attachment_mime_type: item.attachment_mime_type,
+            attachment_size: item.attachment_size,
             reported_by_user_id: item.reported_by_user_id,
             assigned_to_user_id: item.assigned_to_user_id,
-            is_active_raw: item.is_active,
             created_at_raw: item.created_at,
             updated_at_raw: item.updated_at,
             asset_name: item.asset?.name || "-",
@@ -168,7 +220,6 @@ export default function Maintenances() {
         vendor_name: maintenance.vendor_name || null,
         resolution_note: maintenance.resolution_note || null,
         assigned_to_user_id: maintenance.assigned_to_user_id,
-        is_active: maintenance.is_active,
       };
 
       const updateRes = await fetch(`${API_BASE_URL}/maintenances/${maintenance.id}`, {
@@ -204,6 +255,14 @@ export default function Maintenances() {
         }
       }
 
+      if (maintenance.removeAttachment && !maintenance.attachmentFile) {
+        await removeMaintenanceAttachment(maintenance.id, token);
+      }
+
+      if (maintenance.attachmentFile) {
+        await uploadMaintenanceAttachment(maintenance.id, maintenance.attachmentFile, token);
+      }
+
       await fetchMaintenances();
       toast({
         title: "Maintenance updated",
@@ -226,8 +285,8 @@ export default function Maintenances() {
     try {
       setDeletingId(maintenance.id);
       const token = localStorage.getItem("access_token");
-      const res = await fetch(`${API_BASE_URL}/maintenances/${maintenance.id}/deactivate`, {
-        method: "PATCH",
+      const res = await fetch(`${API_BASE_URL}/maintenances/${maintenance.id}`, {
+        method: "DELETE",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
@@ -240,7 +299,7 @@ export default function Maintenances() {
 
       await fetchMaintenances();
       toast({
-        title: "Maintenance deactivated",
+        title: "Maintenance deleted",
         status: "success",
       });
     } catch (error) {
@@ -280,12 +339,17 @@ export default function Maintenances() {
           vendor_name: maintenance.vendor_name || null,
           resolution_note: maintenance.resolution_note || null,
           assigned_to_user_id: maintenance.assigned_to_user_id,
-          is_active: maintenance.is_active,
         }),
       });
 
       if (!res.ok) {
         throw new Error(await getErrorMessage(res, "Create maintenance failed"));
+      }
+
+      const createdMaintenance = await res.json();
+
+      if (maintenance.attachmentFile) {
+        await uploadMaintenanceAttachment(createdMaintenance.id, maintenance.attachmentFile, token);
       }
 
       await fetchMaintenances();

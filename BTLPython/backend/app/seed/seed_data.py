@@ -16,7 +16,7 @@ from app.models.user import User, UserRole
 def get_or_create_department(db, *, code: str, name: str, description: str) -> Department:
     department = db.scalar(select(Department).where(Department.code == code))
     if department is None:
-        department = Department(code=code, name=name, description=description, is_active=True)
+        department = Department(code=code, name=name, description=description)
         db.add(department)
         db.flush()
     return department
@@ -41,7 +41,6 @@ def get_or_create_user(
             role=role,
             department_id=department_id,
             hashed_password=get_password_hash(password),
-            is_active=True,
         )
         db.add(user)
         db.flush()
@@ -123,7 +122,6 @@ def seed() -> None:
             note="San sang cap phat",
             assigned_department_id=it_department.id,
             assigned_user_id=manager_user.id,
-            is_active=True,
         )
         get_or_create_asset(
             db,
@@ -140,7 +138,6 @@ def seed() -> None:
             note="Dang su dung",
             assigned_department_id=admin_department.id,
             assigned_user_id=admin_user.id,
-            is_active=True,
         )
 
         get_or_create_supply(
@@ -156,7 +153,6 @@ def seed() -> None:
             description="Giay in A4 80gsm",
             note=None,
             managed_department_id=admin_department.id,
-            is_active=True,
         )
         get_or_create_supply(
             db,
@@ -171,7 +167,6 @@ def seed() -> None:
             description="Muc in dung cho HP LaserJet P2035",
             note="Can nhap them som",
             managed_department_id=it_department.id,
-            is_active=True,
         )
 
         db.commit()

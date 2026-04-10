@@ -65,8 +65,6 @@ export default function Settings() {
           assigned_user_id: item.assigned_user_id,
           assigned_department: item.assigned_department?.name || "-",
           assigned_user: item.assigned_user?.name || "-" ,
-          is_active: item.is_active ? "Active" : "Inactive",
-          is_active_raw: item.is_active,
           created_at: new Date(item.created_at).toLocaleString("vi-VN")
         }))
       );
@@ -153,7 +151,6 @@ export default function Settings() {
           condition: asset.condition || null,
           location: asset.location || null,
           note: asset.note || null,
-          is_active: asset.is_active,
         }),
       });
 
@@ -182,8 +179,8 @@ export default function Settings() {
     try {
       setDeletingId(asset.id);
       const token = localStorage.getItem("access_token");
-      const res = await fetch(`http://127.0.0.1:8000/api/v1/assets/${asset.id}/deactivate`, {
-        method: "PATCH",
+      const res = await fetch(`http://127.0.0.1:8000/api/v1/assets/${asset.id}`, {
+        method: "DELETE",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`
@@ -196,7 +193,7 @@ export default function Settings() {
 
       await fetchAssets();
       toast({
-        title: "Asset deactivated",
+        title: "Asset deleted",
         status: "success",
       });
     } catch (error) {
@@ -235,7 +232,6 @@ export default function Settings() {
           note: asset.note || null,
           assigned_department_id: asset.assigned_department_id,
           assigned_user_id: asset.assigned_user_id,
-          is_active: asset.is_active,
         }),
       });
 

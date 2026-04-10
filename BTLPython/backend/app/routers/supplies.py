@@ -9,7 +9,7 @@ from app.models.user import User, UserRole
 from app.schemas.supply import SupplyCreate, SupplyResponse, SupplyStockUpdate, SupplyUpdate
 from app.services.supply_service import (
     create_supply,
-    deactivate_supply,
+    delete_supply,
     get_supply_or_404,
     list_supplies,
     update_supply,
@@ -27,7 +27,6 @@ def read_supplies(
     category: str | None = Query(default=None, min_length=1, max_length=100),
     managed_department_id: int | None = Query(default=None, ge=1),
     low_stock_only: bool = Query(default=False),
-    is_active: bool | None = Query(default=None),
     db: Session = Depends(get_db),
     _: User = Depends(require_roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.STAFF)),
 ):
@@ -39,7 +38,6 @@ def read_supplies(
         category=category,
         managed_department_id=managed_department_id,
         low_stock_only=low_stock_only,
-        is_active=is_active,
     )
 
 
@@ -83,11 +81,11 @@ def update_existing_supply_stock(
     return update_supply_stock(db=db, supply=supply, payload=payload)
 
 
-@router.patch("/{supply_id}/deactivate", response_model=SupplyResponse)
-def deactivate_existing_supply(
+@router.delete("/{supply_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_existing_supply(
     supply_id: int,
     db: Session = Depends(get_db),
     _: User = Depends(require_roles(UserRole.ADMIN)),
 ):
     supply = get_supply_or_404(db=db, supply_id=supply_id)
-    return deactivate_supply(db=db, supply=supply)
+    delete_supply(db=db, supply=supply)

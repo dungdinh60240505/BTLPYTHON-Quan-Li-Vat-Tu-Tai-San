@@ -28,6 +28,7 @@ from app.routers.users import router as user_router
 async def lifespan(app: FastAPI):
     settings.UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
     settings.AVATAR_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+    settings.MAINTENANCE_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
     create_db_and_tables()
     yield
 

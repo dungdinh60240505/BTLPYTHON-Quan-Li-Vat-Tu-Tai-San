@@ -4,14 +4,9 @@ import {
   Button,
   Flex,
   Box,
-  Icon,
   Input,
   InputGroup,
   InputLeftElement,
-  Menu,
-  MenuButton,
-  MenuItem,
-  MenuList,
   Select,
   Table,
   Tbody,
@@ -20,6 +15,7 @@ import {
   Th,
   Thead,
   Tr,
+  useToast,
   useColorModeValue,
 } from "@chakra-ui/react";
 import * as React from "react";
@@ -32,14 +28,302 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import { AddIcon, SearchIcon } from "@chakra-ui/icons";
-import { MdCheck, MdFilterList } from "react-icons/md";
 
 import Card from "components/card/Card";
 import AllocationModal from "./AllocationModal";
 
 const columnHelper = createColumnHelper();
 const PAGE_SIZE = 10;
-const ALLOCATION_STATUS_OPTIONS = ["active", "completed", "cancelled", "returned"];
+const ALLOCATION_STATUS_OPTIONS = ["active", "returned", "cancelled"];
+const PDF_MAROON = "#7a1f2b";
+
+const stringToUint8Array = (value) => new TextEncoder().encode(value);
+
+const dataUrlToUint8Array = (dataUrl) => {
+  const base64 = dataUrl.split(",")[1];
+  const binaryString = window.atob(base64);
+  const bytes = new Uint8Array(binaryString.length);
+  for (let index = 0; index < binaryString.length; index += 1) {
+    bytes[index] = binaryString.charCodeAt(index);
+  }
+  return bytes;
+};
+
+const mergePdfChunks = (chunks) => {
+  const totalLength = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
+  const merged = new Uint8Array(totalLength);
+  let offset = 0;
+  chunks.forEach((chunk) => {
+    merged.set(chunk, offset);
+    offset += chunk.length;
+  });
+  return merged;
+};
+
+const createPdfFromJpeg = ({ imageBytes, imageWidth, imageHeight }) => {
+  const pageWidth = 595.28;
+  const pageHeight = 841.89;
+  const scale = Math.min(pageWidth / imageWidth, pageHeight / imageHeight);
+  const renderWidth = imageWidth * scale;
+  const renderHeight = imageHeight * scale;
+  const offsetX = (pageWidth - renderWidth) / 2;
+  const offsetY = pageHeight - renderHeight;
+  const contentStream = `q\n${renderWidth} 0 0 ${renderHeight} ${offsetX} ${offsetY} cm\n/Im0 Do\nQ`;
+  const pdfChunks = [];
+  const offsets = [0];
+
+  const pushChunk = (chunk) => {
+    pdfChunks.push(chunk);
+  };
+
+  const pushText = (text) => {
+    pushChunk(stringToUint8Array(text));
+  };
+
+  pushText("%PDF-1.4\n");
+
+  const addObject = (objectNumber, beforeStream, streamBytes) => {
+    offsets[objectNumber] = pdfChunks.reduce((sum, chunk) => sum + chunk.length, 0);
+    pushText(`${objectNumber} 0 obj\n`);
+    pushText(beforeStream);
+    if (streamBytes) {
+      pushText("stream\n");
+      pushChunk(streamBytes);
+      pushText("\nendstream\n");
+    }
+    pushText("endobj\n");
+  };
+
+  addObject(1, "<< /Type /Catalog /Pages 2 0 R >>\n");
+  addObject(2, "<< /Type /Pages /Kids [3 0 R] /Count 1 >>\n");
+  addObject(
+    3,
+    `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageWidth} ${pageHeight}] /Resources << /XObject << /Im0 4 0 R >> >> /Contents 5 0 R >>\n`,
+  );
+  addObject(
+    4,
+    `<< /Type /XObject /Subtype /Image /Width ${imageWidth} /Height ${imageHeight} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${imageBytes.length} >>\n`,
+    imageBytes,
+  );
+  addObject(
+    5,
+    `<< /Length ${stringToUint8Array(contentStream).length} >>\n`,
+    stringToUint8Array(contentStream),
+  );
+
+  const xrefOffset = pdfChunks.reduce((sum, chunk) => sum + chunk.length, 0);
+  pushText("xref\n");
+  pushText("0 6\n");
+  pushText("0000000000 65535 f \n");
+  for (let objectNumber = 1; objectNumber <= 5; objectNumber += 1) {
+    pushText(`${String(offsets[objectNumber]).padStart(10, "0")} 00000 n \n`);
+  }
+  pushText("trailer\n");
+  pushText("<< /Size 6 /Root 1 0 R >>\n");
+  pushText("startxref\n");
+  pushText(`${xrefOffset}\n`);
+  pushText("%%EOF");
+
+  return new Blob([mergePdfChunks(pdfChunks)], { type: "application/pdf" });
+};
+
+const normalizeValue = (value) => {
+  if (value == null || value === "") {
+    return "";
+  }
+  else if(value=="returned"){
+    return "Đã trả";
+  }
+  else if(value=="active"){
+    return "Đang sử dụng";
+  }
+  else if(value=="cancelled"){
+    return "Đã hủy";
+  }
+  return String(value);
+};
+
+const wrapText = (context, text, maxWidth) => {
+  const words = normalizeValue(text).split(/\s+/).filter(Boolean);
+  if (words.length === 0) {
+    return [""];
+  }
+
+  const lines = [];
+  let currentLine = "";
+
+  words.forEach((word) => {
+    const testLine = currentLine ? `${currentLine} ${word}` : word;
+    if (context.measureText(testLine).width <= maxWidth) {
+      currentLine = testLine;
+    } else {
+      if (currentLine) {
+        lines.push(currentLine);
+      }
+      currentLine = word;
+    }
+  });
+
+  if (currentLine) {
+    lines.push(currentLine);
+  }
+
+  return lines;
+};
+
+const loadImage = (src) =>
+  new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = src;
+  });
+
+
+const buildAllocationsPdfBlob = async (rows, logoSrc) => {
+  const canvas = document.createElement("canvas");
+  const context = canvas.getContext("2d");
+  const canvasWidth = 1600;
+  const rowHeight = 44;
+  const totalRows = Math.max(rows.length, 12);
+  canvas.width = canvasWidth;
+  canvas.height = 520 + totalRows * rowHeight + 180;
+
+  context.fillStyle = "#fffdf8";
+  context.fillRect(0, 0, canvas.width, canvas.height);
+
+  const logoBox = { x: 60, y: 36, w: 170, h: 110 };
+  if (logoSrc) {
+    try {
+      const logoImg = await loadImage(logoSrc);
+      context.drawImage(logoImg, logoBox.x, logoBox.y, logoBox.w, logoBox.h);
+    } catch (error) {
+      context.strokeStyle = PDF_MAROON;
+      context.lineWidth = 3;
+      context.strokeRect(logoBox.x, logoBox.y, logoBox.w, logoBox.h);
+      context.fillStyle = PDF_MAROON;
+      context.font = "bold 22px Arial";
+      context.textAlign = "center";
+      context.fillText("LOGO", logoBox.x + logoBox.w / 2, logoBox.y + 46);
+    }
+  } else {
+    context.strokeStyle = PDF_MAROON;
+    context.lineWidth = 3;
+    context.strokeRect(logoBox.x, logoBox.y, logoBox.w, logoBox.h);
+    context.fillStyle = PDF_MAROON;
+    context.font = "bold 22px Arial";
+    context.textAlign = "center";
+    context.fillText("LOGO", logoBox.x + logoBox.w / 2, logoBox.y + 46);
+    context.font = "18px Arial";
+    context.fillText("Đặt biểu tượng", logoBox.x + logoBox.w / 2, logoBox.y + 76);
+    context.fillText("của trường tại đây", logoBox.x + logoBox.w / 2, logoBox.y + 100);
+  }
+
+  context.textAlign = "center";
+  context.fillStyle = PDF_MAROON;
+  context.font = "bold 40px 'Times New Roman'";
+  context.fillText("PHIẾU ĐĂNG KÝ CẤP PHÁT THIẾT BỊ", canvasWidth / 2 + 60, 74);
+  context.font = "22px 'Times New Roman'";
+
+  context.textAlign = "left";
+  context.fillStyle = "#1f2937";
+  context.font = "bold 22px 'Times New Roman'";
+  context.fillText("Đơn vị / Phòng ban: ...............................................................", 60, 190);
+  context.fillText("Người lập phiếu: .................................................................", 60, 226);
+  context.fillText("Ghi chú chung: ...................................................................", 60, 262);
+
+  const tableLeft = 20;
+  const tableTop = 310;
+  const columnWidths = [50, 110, 110, 120, 100, 130, 300, 60, 150, 150, 120, 160];
+  const headers = [
+    "STT",
+    "Ngày cấp",
+    "Ngày trả",
+    "Mã phiếu",
+    "Loại",
+    "Mã vật phẩm",
+    "Tên vật phẩm",
+    "SL",
+    "Phòng ban",
+    "Người nhận",
+    "Trạng thái",
+    "Ghi chú",
+  ];
+  const tableWidth = canvasWidth - 40;
+
+  context.fillStyle = "#f6e8ea";
+  context.fillRect(tableLeft, tableTop, tableWidth, rowHeight);
+
+  context.strokeStyle = "#2d2d2d";
+  context.lineWidth = 1.5;
+  context.strokeRect(tableLeft, tableTop, tableWidth, rowHeight * (totalRows + 1));
+
+  let headerX = tableLeft;
+  context.font = "bold 19px 'Times New Roman'";
+  context.fillStyle = PDF_MAROON;
+  headers.forEach((header, index) => {
+    const width = columnWidths[index];
+    context.strokeRect(headerX, tableTop, width, rowHeight);
+    const headerLines = wrapText(context, header, width - 12);
+    headerLines.forEach((line, lineIndex) => {
+      context.fillText(line, headerX + 8, tableTop + 18 + lineIndex * 16);
+    });
+    headerX += width;
+  });
+
+  context.font = "16px 'Times New Roman'";
+  context.fillStyle = "#111827";
+  const printableRows = [...rows];
+  while (printableRows.length < totalRows) {
+    printableRows.push(null);
+  }
+
+  printableRows.forEach((row, rowIndex) => {
+    const y = tableTop + rowHeight * (rowIndex + 1);
+    let cellX = tableLeft;
+    const cellValues = row
+      ? [
+          String(rowIndex + 1),
+          normalizeValue(row.allocated_at),
+          normalizeValue(row.expected_return_date),
+          normalizeValue(row.allocation_code),
+          normalizeValue(row.allocation_type),
+          normalizeValue(row.item_code),
+          normalizeValue(row.item_name),
+          normalizeValue(row.quantity),
+          normalizeValue(row.department),
+          normalizeValue(row.allocated_user),
+          normalizeValue(row.status),
+          "",
+        ]
+      : new Array(headers.length).fill("");
+
+    cellValues.forEach((value, columnIndex) => {
+      const width = columnWidths[columnIndex];
+      context.strokeRect(cellX, y, width, rowHeight);
+      const lines = wrapText(context, value, width - 10).slice(0, 2);
+      lines.forEach((line, lineIndex) => {
+        context.fillText(line, cellX + 6, y + 17 + lineIndex * 15);
+      });
+      cellX += width;
+    });
+  });
+
+  const footerY = tableTop + rowHeight * (totalRows + 1) + 70;
+  context.fillStyle = PDF_MAROON;
+  context.font = "bold 22px 'Times New Roman'";
+  context.textAlign = "center";
+  context.fillText("Người lập phiếu", canvasWidth - 240, footerY);
+  context.font = "20px 'Times New Roman'";
+  context.fillText("(Ký và ghi rõ họ tên)", canvasWidth - 240, footerY + 34);
+
+  const jpegDataUrl = canvas.toDataURL("image/jpeg", 0.92);
+  return createPdfFromJpeg({
+    imageBytes: dataUrlToUint8Array(jpegDataUrl),
+    imageWidth: canvas.width,
+    imageHeight: canvas.height,
+  });
+};
 
 export default function ColumnTable(props) {
   const {
@@ -49,6 +333,7 @@ export default function ColumnTable(props) {
     onSaveAllocation,
     onCreateAllocation,
     assetOptions,
+    supplyOptions,
     departmentOptions,
     userOptions,
     addLabel = "Add"
@@ -60,13 +345,11 @@ export default function ColumnTable(props) {
   const [departmentFilter, setDepartmentFilter] = React.useState("");
   const [userFilter, setUserFilter] = React.useState("");
   const [pageIndex, setPageIndex] = React.useState(0);
-  const [filters, setFilters] = React.useState({
-    active: true,
-    inactive: true,
-  });
   const [selectedAllocation, setSelectedAllocation] = React.useState(null);
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [modalMode, setModalMode] = React.useState("edit");
+  const [isExporting, setIsExporting] = React.useState(false);
+  const toast = useToast();
   const textColor = useColorModeValue("secondaryGray.900", "white");
   const borderColor = useColorModeValue("gray.200", "whiteAlpha.100");
   const rowHoverBg = useColorModeValue("gray.100", "whiteAlpha.100");
@@ -76,13 +359,6 @@ export default function ColumnTable(props) {
   const searchIconColor = useColorModeValue("gray.400", "gray.300");
   const searchInputBg = useColorModeValue("secondaryGray.300", "navy.900");
   const searchInputColor = useColorModeValue("gray.700", "gray.100");
-  const filterButtonBg = useColorModeValue("secondaryGray.300", "whiteAlpha.100");
-  const filterButtonHoverBg = useColorModeValue("secondaryGray.400", "whiteAlpha.200");
-  const filterMenuBg = useColorModeValue("white", "navy.800");
-  const filterMenuShadow = useColorModeValue(
-    "14px 17px 40px 4px rgba(112, 144, 176, 0.18)",
-    "unset",
-  );
   const columns = [
     columnHelper.accessor("stt", {
       id: "stt",
@@ -219,14 +495,6 @@ export default function ColumnTable(props) {
   }, [data]);
   const filteredData = React.useMemo(() => {
     const normalizedSearch = searchTerm.trim().toLowerCase();
-    const allowedStatuses = [];
-
-    if (filters.active) {
-      allowedStatuses.push("active");
-    }
-    if (filters.inactive) {
-      allowedStatuses.push("inactive");
-    }
 
     return data.filter((row) => {
       const matchesKeyword = !normalizedSearch
@@ -241,26 +509,13 @@ export default function ColumnTable(props) {
         || String(row.allocated_department_id ?? "") === departmentFilter;
       const matchesUser = !userFilter
         || String(row.allocated_user_id ?? "") === userFilter;
-      const normalizedRowStatus = String(row.status ?? "").toLowerCase();
-      const matchesActive = allowedStatuses.length === 0
-        ? true
-        : allowedStatuses.includes(
-            normalizedRowStatus === "completed" ? "inactive" : "active",
-          );
 
-      return matchesKeyword && matchesType && matchesStatus && matchesDepartment && matchesUser && matchesActive;
+      return matchesKeyword && matchesType && matchesStatus && matchesDepartment && matchesUser;
     });
-  }, [allocationTypeFilter, data, departmentFilter, filters, searchTerm, statusFilter, userFilter]);
+  }, [allocationTypeFilter, data, departmentFilter, searchTerm, statusFilter, userFilter]);
   const isSubmitting = Boolean(selectedAllocation && selectedAllocation.id === onSaveAllocation?.loadingId);
   const isDeleting = Boolean(selectedAllocation && selectedAllocation.id === onDeleteAllocation?.loadingId);
   const isCreating = Boolean(onCreateAllocation?.loading);
-
-  const toggleFilter = (key) => {
-    setFilters((prev) => ({
-      ...prev,
-      [key]: !prev[key],
-    }));
-  };
 
   const table = useReactTable({
     data: filteredData,
@@ -283,7 +538,7 @@ export default function ColumnTable(props) {
 
   React.useEffect(() => {
     setPageIndex(0);
-  }, [allocationTypeFilter, departmentFilter, filters, searchTerm, sorting, statusFilter, tableData, userFilter]);
+  }, [allocationTypeFilter, departmentFilter, searchTerm, sorting, statusFilter, tableData, userFilter]);
 
   React.useEffect(() => {
     if (pageIndex !== currentPage) {
@@ -320,6 +575,25 @@ export default function ColumnTable(props) {
     handleCloseModal();
   };
 
+  const handleExportPdf = async () => {
+    try {
+      setIsExporting(true);
+      const pdfBlob = await buildAllocationsPdfBlob(filteredData, "/logo-ptit.png");
+      const pdfUrl = URL.createObjectURL(pdfBlob);
+      window.open(pdfUrl, "_blank", "noopener,noreferrer");
+      window.setTimeout(() => URL.revokeObjectURL(pdfUrl), 60000);
+    } catch (error) {
+      console.error("Export allocations PDF failed:", error);
+      toast({
+        title: "Export file failed",
+        description: "Khong the tao PDF allocations",
+        status: "error",
+      });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   return (
     <>
       <Card flexDirection="column" w="100%" px="0px" overflowX={{ sm: "scroll", lg: "hidden" }}>
@@ -328,6 +602,17 @@ export default function ColumnTable(props) {
             {title ? title : "Default Title"}
           </Text>
         <Flex align="center" gap="12px">
+            <Button
+              variant="outline"
+              colorScheme="red"
+              borderColor={PDF_MAROON}
+              color={PDF_MAROON}
+              _hover={{ bg: "red.50" }}
+              onClick={handleExportPdf}
+              isLoading={isExporting}
+            >
+              Export File
+            </Button>
             <Button
               leftIcon={<AddIcon boxSize={3} />}
               bg={addButtonBg}
@@ -345,40 +630,6 @@ export default function ColumnTable(props) {
             >
               {addLabel}
             </Button>
-            <Menu>
-              <MenuButton
-                as={Button}
-                leftIcon={<Icon as={MdFilterList} boxSize={4} />}
-                bg={filterButtonBg}
-                _hover={{ bg: filterButtonHoverBg }}
-                _active={{ bg: filterButtonHoverBg }}
-                borderRadius="12px"
-                fontWeight="700"
-              >
-                Filter
-              </MenuButton>
-              <MenuList
-                minW="180px"
-                border="transparent"
-                bg={filterMenuBg}
-                boxShadow={filterMenuShadow}
-                borderRadius="16px"
-                p="10px"
-              >
-                <MenuItem borderRadius="10px" onClick={() => toggleFilter("active")}>
-                  <Flex w="100%" align="center" justifyContent="space-between">
-                    <Text>Active</Text>
-                    {filters.active && <Icon as={MdCheck} boxSize={4} />}
-                  </Flex>
-                </MenuItem>
-                <MenuItem borderRadius="10px" onClick={() => toggleFilter("inactive")}>
-                  <Flex w="100%" align="center" justifyContent="space-between">
-                    <Text>Inactive</Text>
-                    {filters.inactive && <Icon as={MdCheck} boxSize={4} />}
-                  </Flex>
-                </MenuItem>
-              </MenuList>
-            </Menu>
           </Flex>
         </Flex>
         <Flex px="25px" mb="4px" gap="12px" flexDirection={{ base: "column", md: "row" }} wrap="wrap">
@@ -553,6 +804,7 @@ export default function ColumnTable(props) {
         mode={modalMode}
         allocation={selectedAllocation}
         assetOptions={assetOptions}
+        supplyOptions={supplyOptions}
         departmentOptions={departmentOptions}
         userOptions={userOptions}
         isOpen={isModalOpen}

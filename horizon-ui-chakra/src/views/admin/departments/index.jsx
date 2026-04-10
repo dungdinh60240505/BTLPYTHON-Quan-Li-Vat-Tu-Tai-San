@@ -60,8 +60,6 @@ export default function Settings() {
           code: item.code,
           name: item.name,
           description: item.description,
-          is_active: item.is_active ? "Active" : "Inactive",
-          is_active_raw: item.is_active,
           created_at: new Date(item.created_at).toLocaleString("vi-VN"),
           updated_at: new Date(item.updated_at).toLocaleString("vi-VN"),
         }))
@@ -95,7 +93,6 @@ export default function Settings() {
           code: department.code.trim(),
           name: department.name.trim(),
           description: department.description || null,
-          is_active: department.is_active,
         }),
       });
 
@@ -124,8 +121,8 @@ export default function Settings() {
     try {
       setDeletingId(department.id);
       const token = localStorage.getItem("access_token");
-      const res = await fetch(`http://127.0.0.1:8000/api/v1/departments/${department.id}/deactivate`, {
-        method: "PATCH",
+      const res = await fetch(`http://127.0.0.1:8000/api/v1/departments/${department.id}`, {
+        method: "DELETE",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`
@@ -138,7 +135,7 @@ export default function Settings() {
 
       await fetchDepartments();
       toast({
-        title: "Department deactivated",
+        title: "Department deleted",
         status: "success",
       });
     } catch (error) {
@@ -167,7 +164,6 @@ export default function Settings() {
           code: department.code.trim(),
           name: department.name.trim(),
           description: department.description || null,
-          is_active: department.is_active,
         }),
       });
 

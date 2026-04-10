@@ -133,11 +133,6 @@ def create_allocation(db: Session, payload: AllocationCreate, current_user: User
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Asset not found",
             )
-        if not asset.is_active:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Asset is inactive",
-            )
         if asset.status != AssetStatus.AVAILABLE:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -156,11 +151,6 @@ def create_allocation(db: Session, payload: AllocationCreate, current_user: User
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Supply not found",
-            )
-        if not supply.is_active:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Supply is inactive",
             )
         if Decimal(str(supply.quantity_in_stock)) < payload.quantity:
             raise HTTPException(
@@ -185,7 +175,7 @@ def create_allocation(db: Session, payload: AllocationCreate, current_user: User
         expected_return_date=payload.expected_return_date,
         purpose=payload.purpose.strip() if payload.purpose else None,
         note=payload.note.strip() if payload.note else None,
-        is_active=payload.is_active,
+        is_active=True,
     )
 
     db.add(allocation)
@@ -239,8 +229,7 @@ def update_allocation(db: Session, allocation: Allocation, payload: AllocationUp
     if "note" in update_data:
         allocation.note = update_data["note"].strip() if update_data["note"] else None
 
-    if "is_active" in update_data and update_data["is_active"] is not None:
-        allocation.is_active = update_data["is_active"]
+    allocation.is_active = True
 
     if "status" in update_data and update_data["status"] is not None:
         allocation.status = update_data["status"]
@@ -309,12 +298,12 @@ def update_allocation_status(
         )
 
     if allocation.supply_id is not None and payload.status not in {
-        AllocationStatus.COMPLETED,
+        AllocationStatus.RETURNED,
         AllocationStatus.CANCELLED,
     }:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Supply allocation status must be COMPLETED or CANCELLED",
+            detail="Supply allocation status must be RETURNED or CANCELLED",
         )
 
     if allocation.asset_id is not None:
@@ -325,7 +314,10 @@ def update_allocation_status(
             asset.assigned_user_id = None
             db.add(asset)
 
-    if allocation.supply_id is not None and payload.status == AllocationStatus.CANCELLED:
+    if allocation.supply_id is not None and payload.status in {
+        AllocationStatus.RETURNED,
+        AllocationStatus.CANCELLED,
+    }:
         supply = db.get(Supply, allocation.supply_id)
         if supply is not None:
             supply.quantity_in_stock = Decimal(str(supply.quantity_in_stock)) + Decimal(
@@ -345,12 +337,25 @@ def update_allocation_status(
 
 
 
-def deactivate_allocation(db: Session, allocation: Allocation) -> Allocation:
-    allocation.is_active = False
-    db.add(allocation)
+def delete_allocation(db: Session, allocation: Allocation) -> None:
+    if allocation.asset_id is not None and allocation.status == AllocationStatus.ACTIVE:
+        asset = db.get(Asset, allocation.asset_id)
+        if asset is not None:
+            asset.status = AssetStatus.AVAILABLE
+            asset.assigned_department_id = None
+            asset.assigned_user_id = None
+            db.add(asset)
+
+    if allocation.supply_id is not None and allocation.status == AllocationStatus.ACTIVE:
+        supply = db.get(Supply, allocation.supply_id)
+        if supply is not None:
+            supply.quantity_in_stock = Decimal(str(supply.quantity_in_stock)) + Decimal(
+                str(allocation.quantity)
+            )
+            db.add(supply)
+
+    db.delete(allocation)
     db.commit()
-    db.refresh(allocation)
-    return get_allocation_or_404(db=db, allocation_id=allocation.id)
 
 
 

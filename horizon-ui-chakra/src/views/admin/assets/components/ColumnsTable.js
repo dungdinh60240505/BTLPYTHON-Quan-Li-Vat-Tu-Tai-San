@@ -193,24 +193,6 @@ export default function ColumnTable(props) {
         </Text>
       ),
     }),
-    columnHelper.accessor('is_active', {
-      id: 'is_active',
-      header: () => (
-        <Text
-          justifyContent="space-between"
-          align="center"
-          fontSize={{ sm: '10px', lg: '12px' }}
-          color="gray.400"
-        >
-          IS ACTIVE
-        </Text>
-      ),
-      cell: (info) => (
-        <Text color={textColor} fontSize="sm" fontWeight="700">
-          {info.getValue()}
-        </Text>
-      ),
-    })
   ];
 
   const data = React.useMemo(() => tableData ?? [], [tableData]);
@@ -227,14 +209,6 @@ export default function ColumnTable(props) {
   }, [data]);
   const filteredData = React.useMemo(() => {
     const normalizedSearch = searchTerm.trim().toLowerCase();
-    const allowedStatuses = [];
-
-    if (filters.active) {
-      allowedStatuses.push('active');
-    }
-    if (filters.inactive) {
-      allowedStatuses.push('inactive');
-    }
 
     return data.filter((row) => {
       const matchesKeyword = !normalizedSearch
@@ -247,13 +221,10 @@ export default function ColumnTable(props) {
         || String(row.assigned_user_id ?? '') === userFilter;
       const matchesAssetStatus = !statusFilter
         || String(row.status ?? '') === statusFilter;
-      const matchesActive = allowedStatuses.length === 0
-        ? true
-        : allowedStatuses.includes(String(row.is_active ?? '').toLowerCase());
 
-      return matchesKeyword && matchesDepartment && matchesUser && matchesAssetStatus && matchesActive;
+      return matchesKeyword && matchesDepartment && matchesUser && matchesAssetStatus;
     });
-  }, [data, departmentFilter, filters, searchTerm, statusFilter, userFilter]);
+  }, [data, departmentFilter, searchTerm, statusFilter, userFilter]);
 
   const toggleFilter = (key) => {
     setFilters((prev) => ({
@@ -339,40 +310,7 @@ export default function ColumnTable(props) {
           >
             {addLabel}
           </Button>
-          <Menu>
-            <MenuButton
-              as={Button}
-              leftIcon={<Icon as={MdFilterList} boxSize={4} />}
-              bg={filterButtonBg}
-              _hover={{ bg: filterButtonHoverBg }}
-              _active={{ bg: filterButtonHoverBg }}
-              borderRadius="12px"
-              fontWeight="700"
-            >
-              Filter
-            </MenuButton>
-            <MenuList
-              minW="180px"
-              border="transparent"
-              bg={filterMenuBg}
-              boxShadow={filterMenuShadow}
-              borderRadius="16px"
-              p="10px"
-            >
-              <MenuItem borderRadius="10px" onClick={() => toggleFilter('active')}>
-                <Flex w="100%" align="center" justifyContent="space-between">
-                  <Text>Active</Text>
-                  {filters.active && <Icon as={MdCheck} boxSize={4} />}
-                </Flex>
-              </MenuItem>
-              <MenuItem borderRadius="10px" onClick={() => toggleFilter('inactive')}>
-                <Flex w="100%" align="center" justifyContent="space-between">
-                  <Text>Inactive</Text>
-                  {filters.inactive && <Icon as={MdCheck} boxSize={4} />}
-                </Flex>
-              </MenuItem>
-            </MenuList>
-          </Menu>
+          
         </Flex>
       </Flex>
       <Flex px="25px" mb="4px" gap="12px" flexDirection={{ base: 'column', md: 'row' }} wrap="wrap">

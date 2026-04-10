@@ -1,6 +1,5 @@
 import React from "react";
 import {
-  Badge,
   Button,
   FormControl,
   FormLabel,
@@ -14,7 +13,6 @@ import {
   ModalOverlay,
   SimpleGrid,
   Stack,
-  Switch,
   Textarea,
   useColorModeValue,
 } from "@chakra-ui/react";
@@ -23,7 +21,6 @@ const initialFormData = {
   code: "",
   name: "",
   description: "",
-  is_active: true,
 };
 
 export default function DepartmentModal(props) {
@@ -57,7 +54,6 @@ export default function DepartmentModal(props) {
       code: department.code || "",
       name: department.name || "",
       description: department.description || "",
-      is_active: Boolean(department.is_active_raw ?? department.is_active === "Active"),
     });
     setIsEditing(false);
   }, [department, isCreateMode, isOpen]);
@@ -72,19 +68,11 @@ export default function DepartmentModal(props) {
       code: formData.code.trim(),
       name: formData.name.trim(),
       description: formData.description.trim(),
-      is_active: formData.is_active,
     });
     if (!isCreateMode) setIsEditing(false);
   };
 
   if (!isCreateMode && !department) return null;
-
-  const isDepartmentActive =
-    typeof department?.is_active_raw === "boolean"
-      ? department.is_active_raw
-      : typeof department?.is_active === "string"
-        ? department.is_active === "Active"
-        : Boolean(department?.is_active);
 
   const readOnlyFieldProps = {
     isReadOnly: true,
@@ -101,11 +89,6 @@ export default function DepartmentModal(props) {
         <ModalHeader>{isCreateMode ? "Add Department" : "Department Detail"}</ModalHeader>
         <ModalCloseButton />
         <ModalBody>
-          {!isCreateMode && !isEditing && (
-            <Badge colorScheme={isDepartmentActive ? "green" : "red"} px="12px" py="6px" mb={4} borderRadius="full" textTransform="none" fontSize="sm">
-              {isDepartmentActive ? "Active" : "Inactive"}
-            </Badge>
-          )}
           {isCreateMode || isEditing ? (
             <Stack spacing={4}>
               <FormControl isRequired>
@@ -119,10 +102,6 @@ export default function DepartmentModal(props) {
               <FormControl>
                 <FormLabel>Description</FormLabel>
                 <Textarea value={formData.description} onChange={(e) => handleChange("description", e.target.value)} rows={4} />
-              </FormControl>
-              <FormControl display="flex" alignItems="center" gap={3}>
-                <FormLabel mb="0">Active</FormLabel>
-                <Switch isChecked={formData.is_active} onChange={(e) => handleChange("is_active", e.target.checked)} />
               </FormControl>
             </Stack>
           ) : (

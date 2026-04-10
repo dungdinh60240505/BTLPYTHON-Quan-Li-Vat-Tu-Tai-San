@@ -47,8 +47,6 @@ export default function ColumnTable(props) {
   const [departmentSearch, setDepartmentSearch] = React.useState('');
   const [pageIndex, setPageIndex] = React.useState(0);
   const [filters, setFilters] = React.useState({
-    active: true,
-    inactive: true,
     admin: true,
     staff: true,
   });
@@ -113,19 +111,6 @@ export default function ColumnTable(props) {
         </Text>
       ),
     }),
-    columnHelper.accessor('is_active', {
-      id: 'is_active',
-      header: () => (
-        <Text justifyContent="space-between" align="center" fontSize={{ sm: '10px', lg: '12px' }} color="gray.400">
-          IS_ACTIVE
-        </Text>
-      ),
-      cell: (info) => (
-        <Text color={textColor} fontSize="sm" fontWeight="700">
-          {info.getValue()}
-        </Text>
-      ),
-    }),
     columnHelper.accessor('department', {
       id: 'department',
       header: () => (
@@ -145,15 +130,8 @@ export default function ColumnTable(props) {
   const filteredData = React.useMemo(() => {
     const normalizedKeyword = keyword.trim().toLowerCase();
     const normalizedDepartment = departmentSearch.trim().toLowerCase();
-    const allowedStatuses = [];
     const allowedRoles = [];
 
-    if (filters.active) {
-      allowedStatuses.push('active');
-    }
-    if (filters.inactive) {
-      allowedStatuses.push('inactive');
-    }
     if (filters.admin) {
       allowedRoles.push('admin');
     }
@@ -175,14 +153,11 @@ export default function ColumnTable(props) {
         ].some(
           (value) => value != null && String(value).toLowerCase().includes(normalizedKeyword),
         );
-      const matchesStatus = allowedStatuses.length === 0
-        ? true
-        : allowedStatuses.includes(String(row.is_active ?? '').toLowerCase());
       const matchesRole = allowedRoles.length === 0
         ? true
         : allowedRoles.includes(String(row.role ?? '').toLowerCase());
 
-      return matchesDepartment && matchesKeyword && matchesStatus && matchesRole;
+      return matchesDepartment && matchesKeyword && matchesRole;
     });
   }, [data, departmentSearch, filters, keyword]);
   const isSubmitting = Boolean(selectedUser && selectedUser.id === onSaveUser?.loadingId);
@@ -299,18 +274,7 @@ export default function ColumnTable(props) {
                 borderRadius="16px"
                 p="10px"
               >
-                <MenuItem borderRadius="10px" onClick={() => toggleFilter('active')}>
-                  <Flex w="100%" align="center" justifyContent="space-between">
-                    <Text>Active</Text>
-                    {filters.active && <Icon as={MdCheck} boxSize={4} />}
-                  </Flex>
-                </MenuItem>
-                <MenuItem borderRadius="10px" onClick={() => toggleFilter('inactive')}>
-                  <Flex w="100%" align="center" justifyContent="space-between">
-                    <Text>Inactive</Text>
-                    {filters.inactive && <Icon as={MdCheck} boxSize={4} />}
-                  </Flex>
-                </MenuItem>
+                
                 <MenuItem borderRadius="10px" onClick={() => toggleFilter('admin')}>
                   <Flex w="100%" align="center" justifyContent="space-between">
                     <Text>Admin</Text>

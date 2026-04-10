@@ -1,31 +1,51 @@
 # Báo cáo Database Models và API Endpoints
 
 ## Tổng quan
-Dự án quản lý tài sản PTIT sử dụng FastAPI backend với SQLAlchemy ORM và SQLite database. Có 6 models chính: User, Department, Asset, Supply, Allocation, Maintenance.
+
+Dự án quản lý tài sản PTIT sử dụng FastAPI, SQLAlchemy ORM và SQLite. API chính được mount dưới prefix `/api/v1`.
+
+Backend hiện có các nhóm chức năng chính:
+- Authentication
+- Users
+- Departments
+- Assets
+- Supplies
+- Allocations
+- Maintenances
+- Reports
+
+Ngoài các API nghiệp vụ, ứng dụng còn có:
+- `GET /` để trả về thông tin chào mừng và đường dẫn docs
+- `GET /health` để kiểm tra trạng thái ứng dụng
+- `GET /api/v1/health` để kiểm tra trạng thái API kèm version
+- `StaticFiles` mount tại `/uploads` để phục vụ file upload cục bộ
 
 ## Database Models
 
 ### 1. User
-**Mô tả:** Người dùng hệ thống có thể đăng nhập và quản lý tài sản/vật tư.
+**Mô tả:** Người dùng hệ thống có thể đăng nhập và thao tác theo vai trò.
 
-**Các trường:**
+**Các trường chính:**
 - `id` (int, PK)
 - `username` (str, unique)
 - `email` (str, unique)
 - `full_name` (str)
 - `hashed_password` (str)
 - `phone_number` (str, nullable)
-- `role` (enum: admin, manager, staff)
+- `role` (enum: `admin`, `manager`, `staff`)
+- `avatar_url` (str, nullable)
 - `is_active` (bool)
-- `department_id` (int, FK to departments)
+- `department_id` (int, FK tới `departments`, nullable tùy dữ liệu)
+- `created_at` (datetime)
+- `updated_at` (datetime)
 
 **Relationships:**
-- Thuộc về Department
+- Thuộc về `Department`
 
 ### 2. Department
-**Mô tả:** Phòng ban/khoa trong PTIT sở hữu người dùng và tài sản.
+**Mô tả:** Phòng ban hoặc đơn vị quản lý người dùng và tài sản.
 
-**Các trường:**
+**Các trường chính:**
 - `id` (int, PK)
 - `code` (str, unique)
 - `name` (str, unique)
@@ -35,12 +55,12 @@ Dự án quản lý tài sản PTIT sử dụng FastAPI backend với SQLAlchemy
 - `updated_at` (datetime)
 
 **Relationships:**
-- Có nhiều Users
+- Có nhiều `User`
 
 ### 3. Asset
-**Mô tả:** Tài sản cố định như máy tính, máy chiếu, v.v.
+**Mô tả:** Tài sản cố định như máy tính, máy chiếu, thiết bị.
 
-**Các trường:**
+**Các trường chính:**
 - `id` (int, PK)
 - `asset_code` (str, unique)
 - `name` (str)
@@ -49,8 +69,8 @@ Dự án quản lý tài sản PTIT sử dụng FastAPI backend với SQLAlchemy
 - `specification` (text, nullable)
 - `purchase_date` (date, nullable)
 - `purchase_cost` (decimal, nullable)
-- `status` (enum: available, in_use, under_maintenance, damaged, liquidated)
-- `condition` (enum: new, good, fair, poor, broken)
+- `status` (enum: `available`, `in_use`, `under_maintenance`, `damaged`, `liquidated`)
+- `condition` (enum: `new`, `good`, `fair`, `poor`, `broken`)
 - `location` (str, nullable)
 - `note` (text, nullable)
 - `is_active` (bool)
@@ -59,18 +79,15 @@ Dự án quản lý tài sản PTIT sử dụng FastAPI backend với SQLAlchemy
 - `created_at` (datetime)
 - `updated_at` (datetime)
 
-**Relationships:**
-- Thuộc về Department và User
-
 ### 4. Supply
-**Mô tả:** Vật tư tiêu hao như giấy, mực, dây cáp, v.v.
+**Mô tả:** Vật tư tiêu hao như giấy, mực, phụ kiện.
 
-**Các trường:**
+**Các trường chính:**
 - `id` (int, PK)
 - `supply_code` (str, unique)
 - `name` (str)
 - `category` (str)
-- `unit` (str, default: "item")
+- `unit` (str, mặc định `"item"`)
 - `quantity_in_stock` (decimal)
 - `minimum_stock_level` (decimal)
 - `unit_price` (decimal, nullable)
@@ -82,17 +99,14 @@ Dự án quản lý tài sản PTIT sử dụng FastAPI backend với SQLAlchemy
 - `created_at` (datetime)
 - `updated_at` (datetime)
 
-**Relationships:**
-- Quản lý bởi Department
-
 ### 5. Allocation
-**Mô tả:** Ghi nhận cấp phát tài sản hoặc vật tư cho phòng ban/người dùng.
+**Mô tả:** Ghi nhận cấp phát tài sản hoặc vật tư cho phòng ban hoặc người dùng.
 
-**Các trường:**
+**Các trường chính:**
 - `id` (int, PK)
 - `allocation_code` (str, unique)
-- `allocation_type` (enum: asset, supply)
-- `status` (enum: active, completed, returned, cancelled)
+- `allocation_type` (enum: `asset`, `supply`)
+- `status` (enum: `active`, `completed`, `returned`, `cancelled`)
 - `asset_id` (int, FK, nullable)
 - `supply_id` (int, FK, nullable)
 - `quantity` (decimal)
@@ -108,16 +122,18 @@ Dự án quản lý tài sản PTIT sử dụng FastAPI backend với SQLAlchemy
 - `created_at` (datetime)
 - `updated_at` (datetime)
 
+**Lưu ý:** Chức năng `allocation` không có xử lý file, không có cột attachment/file path và API không dùng `UploadFile`.
+
 ### 6. Maintenance
 **Mô tả:** Ghi nhận bảo trì tài sản cố định.
 
-**Các trường:**
+**Các trường chính:**
 - `id` (int, PK)
 - `maintenance_code` (str, unique)
 - `asset_id` (int, FK)
-- `maintenance_type` (enum: preventive, corrective, inspection, warranty, other)
-- `status` (enum: scheduled, in_progress, completed, cancelled)
-- `priority` (enum: low, medium, high, urgent)
+- `maintenance_type` (enum: `preventive`, `corrective`, `inspection`, `warranty`, `other`)
+- `status` (enum: `scheduled`, `in_progress`, `completed`, `cancelled`)
+- `priority` (enum: `low`, `medium`, `high`, `urgent`)
 - `title` (str)
 - `description` (text, nullable)
 - `scheduled_date` (date, nullable)
@@ -133,73 +149,112 @@ Dự án quản lý tài sản PTIT sử dụng FastAPI backend với SQLAlchemy
 - `created_at` (datetime)
 - `updated_at` (datetime)
 
+**Lưu ý:** Chức năng `maintenance` không có xử lý file, không có upload biên bản, hóa đơn hay tài liệu đính kèm.
+
 ## API Endpoints
 
 ### Authentication
-- `POST /auth/register` - Đăng ký user mới
-- `POST /auth/login` - Đăng nhập, trả về JWT token
+- `POST /api/v1/auth/register` - Đăng ký tài khoản mới
+- `POST /api/v1/auth/login` - Đăng nhập bằng `OAuth2PasswordRequestForm`
+- `POST /api/v1/auth/login-json` - Đăng nhập bằng JSON
+- `GET /api/v1/auth/me` - Lấy thông tin người dùng hiện tại
+- `POST /api/v1/auth/me/avatar` - Upload avatar cho người dùng hiện tại
+- `POST /api/v1/auth/change-password` - Đổi mật khẩu
 
 ### Users
-- `GET /users` - Liệt kê users (có filter: keyword, department_id, role, is_active)
-- `GET /users/{user_id}` - Chi tiết user
-- `POST /users` - Tạo user mới (ADMIN only)
-- `PUT /users/{user_id}` - Cập nhật user (ADMIN only)
-- `PATCH /users/{user_id}/activate` - Kích hoạt user (ADMIN only)
-- `PATCH /users/{user_id}/deactivate` - Vô hiệu hóa user (ADMIN only)
+- `GET /api/v1/users` - Liệt kê users, có filter `keyword`, `department_id`, `role`, `is_active`
+- `GET /api/v1/users/{user_id}` - Chi tiết user
+- `POST /api/v1/users` - Tạo user mới
+- `PUT /api/v1/users/{user_id}` - Cập nhật user
+- `PATCH /api/v1/users/{user_id}/deactivate` - Vô hiệu hóa user
+- `PATCH /api/v1/users/{user_id}/activate` - Kích hoạt lại user
 
 ### Departments
-- `GET /departments` - Liệt kê departments
-- `GET /departments/{department_id}` - Chi tiết department
-- `POST /departments` - Tạo department mới (ADMIN/MANAGER)
-- `PUT /departments/{department_id}` - Cập nhật department (ADMIN/MANAGER)
-- `PATCH /departments/{department_id}/deactivate` - Vô hiệu hóa department (ADMIN)
+- `GET /api/v1/departments` - Liệt kê departments
+- `GET /api/v1/departments/{department_id}` - Chi tiết department
+- `POST /api/v1/departments` - Tạo department mới
+- `PUT /api/v1/departments/{department_id}` - Cập nhật department
+- `PATCH /api/v1/departments/{department_id}/deactivate` - Vô hiệu hóa department
 
 ### Assets
-- `GET /assets` - Liệt kê assets (có filter: keyword, category, status, condition, assigned_department_id, assigned_user_id, is_active)
-- `GET /assets/{asset_id}` - Chi tiết asset
-- `POST /assets` - Tạo asset mới (ADMIN/MANAGER)
-- `PUT /assets/{asset_id}` - Cập nhật asset (ADMIN/MANAGER)
-- `PATCH /assets/{asset_id}/status` - Cập nhật trạng thái asset (ADMIN/MANAGER)
-- `PATCH /assets/{asset_id}/deactivate` - Vô hiệu hóa asset (ADMIN)
+- `GET /api/v1/assets` - Liệt kê assets, có filter `keyword`, `category`, `status`, `condition`, `assigned_department_id`, `assigned_user_id`, `is_active`
+- `GET /api/v1/assets/{asset_id}` - Chi tiết asset
+- `POST /api/v1/assets` - Tạo asset mới
+- `PUT /api/v1/assets/{asset_id}` - Cập nhật asset
+- `PATCH /api/v1/assets/{asset_id}/status` - Cập nhật trạng thái asset
+- `PATCH /api/v1/assets/{asset_id}/deactivate` - Vô hiệu hóa asset
 
 ### Supplies
-- `GET /supplies` - Liệt kê supplies (có filter: keyword, category, managed_department_id, low_stock_only, is_active)
-- `GET /supplies/{supply_id}` - Chi tiết supply
-- `POST /supplies` - Tạo supply mới (ADMIN/MANAGER)
-- `PUT /supplies/{supply_id}` - Cập nhật supply (ADMIN/MANAGER)
-- `PATCH /supplies/{supply_id}/stock` - Cập nhật tồn kho (ADMIN/MANAGER/STAFF)
-- `PATCH /supplies/{supply_id}/deactivate` - Vô hiệu hóa supply (ADMIN)
+- `GET /api/v1/supplies` - Liệt kê supplies, có filter `keyword`, `category`, `managed_department_id`, `low_stock_only`, `is_active`
+- `GET /api/v1/supplies/{supply_id}` - Chi tiết supply
+- `POST /api/v1/supplies` - Tạo supply mới
+- `PUT /api/v1/supplies/{supply_id}` - Cập nhật supply
+- `PATCH /api/v1/supplies/{supply_id}/stock` - Cập nhật tồn kho
+- `PATCH /api/v1/supplies/{supply_id}/deactivate` - Vô hiệu hóa supply
 
 ### Allocations
-- `GET /allocations` - Liệt kê allocations (có filter: keyword, allocation_type, status, allocated_department_id, allocated_user_id, asset_id, supply_id, is_active)
-- `GET /allocations/{allocation_id}` - Chi tiết allocation
-- `POST /allocations` - Tạo allocation mới (ADMIN/MANAGER)
-- `PUT /allocations/{allocation_id}` - Cập nhật allocation (ADMIN/MANAGER)
-- `PATCH /allocations/{allocation_id}/status` - Cập nhật trạng thái allocation (ADMIN/MANAGER)
-- `PATCH /allocations/{allocation_id}/deactivate` - Vô hiệu hóa allocation (ADMIN)
+- `GET /api/v1/allocations` - Liệt kê allocations, có filter `keyword`, `allocation_type`, `status`, `allocated_department_id`, `allocated_user_id`, `asset_id`, `supply_id`, `is_active`
+- `GET /api/v1/allocations/{allocation_id}` - Chi tiết allocation
+- `POST /api/v1/allocations` - Tạo allocation mới
+- `PUT /api/v1/allocations/{allocation_id}` - Cập nhật allocation
+- `PATCH /api/v1/allocations/{allocation_id}/status` - Cập nhật trạng thái allocation
+- `PATCH /api/v1/allocations/{allocation_id}/deactivate` - Vô hiệu hóa allocation
 
 ### Maintenances
-- `GET /maintenances` - Liệt kê maintenances (có filter: keyword, asset_id, assigned_to_user_id, reported_by_user_id, maintenance_type, priority, status, is_active)
-- `GET /maintenances/{maintenance_id}` - Chi tiết maintenance
-- `POST /maintenances` - Tạo maintenance mới (ADMIN/MANAGER/STAFF)
-- `PUT /maintenances/{maintenance_id}` - Cập nhật maintenance (ADMIN/MANAGER)
-- `PATCH /maintenances/{maintenance_id}/status` - Cập nhật trạng thái maintenance (ADMIN/MANAGER/STAFF)
-- `PATCH /maintenances/{maintenance_id}/deactivate` - Vô hiệu hóa maintenance (ADMIN)
+- `GET /api/v1/maintenances` - Liệt kê maintenances, có filter `keyword`, `asset_id`, `assigned_to_user_id`, `reported_by_user_id`, `maintenance_type`, `priority`, `status`, `is_active`
+- `GET /api/v1/maintenances/{maintenance_id}` - Chi tiết maintenance
+- `POST /api/v1/maintenances` - Tạo maintenance mới
+- `PUT /api/v1/maintenances/{maintenance_id}` - Cập nhật maintenance
+- `PATCH /api/v1/maintenances/{maintenance_id}/status` - Cập nhật trạng thái maintenance
+- `PATCH /api/v1/maintenances/{maintenance_id}/deactivate` - Vô hiệu hóa maintenance
 
 ### Reports
-- `GET /reports/dashboard-summary` - Tổng quan dashboard
-- `GET /reports/asset-status-summary` - Thống kê trạng thái assets
-- `GET /reports/low-stock-supplies` - Danh sách supplies tồn kho thấp
+- `GET /api/v1/reports/dashboard-summary` - Tổng quan dashboard
+- `GET /api/v1/reports/asset-status-summary` - Thống kê trạng thái assets
+- `GET /api/v1/reports/low-stock-supplies` - Danh sách supplies tồn kho thấp
+- `GET /api/v1/reports/allocation-status-summary` - Thống kê trạng thái allocations
+- `GET /api/v1/reports/maintenance-status-summary` - Thống kê trạng thái maintenances
+- `GET /api/v1/reports/recent-activity` - Hoạt động gần đây, có query `limit`
 
 ## Authorization
-- **ADMIN**: Toàn quyền
-- **MANAGER**: Quản lý assets, supplies, allocations, maintenances; xem reports
-- **STAFF**: Xem và cập nhật stock supplies, tạo maintenances
 
-## Frontend Implementation Notes
-1. Sử dụng JWT token cho authentication
-2. Implement CRUD tables cho mỗi entity
-3. Form validation theo schemas
-4. Filter và pagination cho danh sách
-5. Dashboard với charts từ reports API
-6. Role-based UI components
+### ADMIN
+- Toàn quyền quản trị
+- Tạo và cập nhật user
+- Kích hoạt hoặc vô hiệu hóa user
+- Vô hiệu hóa các bản ghi quan trọng như department, asset, supply, allocation, maintenance
+
+### MANAGER
+- Quản lý departments
+- Quản lý assets, supplies, allocations, maintenances
+- Xem reports
+- Xem danh sách users
+
+### STAFF
+- Đăng nhập và xem thông tin cá nhân
+- Cập nhật tồn kho supplies
+- Tạo maintenance
+- Cập nhật trạng thái maintenance
+- Xem allocations và maintenances theo quyền router hiện tại
+
+## Ghi chú về xử lý file
+
+Backend hiện có xử lý file, nhưng chỉ áp dụng cho avatar người dùng:
+- Thư mục upload gốc: `backend/uploads`
+- Thư mục avatar: `backend/uploads/avatars`
+- Endpoint upload: `POST /api/v1/auth/me/avatar`
+- Kiểu nhận file: `UploadFile`
+- Thư viện liên quan trong `requirements.txt`: `python-multipart`
+
+Các chức năng `allocation` và `maintenance` hiện không xử lý file:
+- Không có `UploadFile`, `File(...)` hay `Form(...)` trong router của hai chức năng này
+- Không có field lưu attachment/file path trong model
+- Frontend đang gửi dữ liệu JSON/CRUD thông thường cho hai module này
+
+## Frontend / Integration Notes
+
+1. Sử dụng JWT token cho authentication.
+2. Có thể dùng `POST /api/v1/auth/login` nếu gửi form-data chuẩn OAuth2, hoặc `POST /api/v1/auth/login-json` nếu frontend gửi JSON.
+3. Avatar người dùng cần gửi `multipart/form-data`.
+4. Các module còn lại chủ yếu dùng JSON payload.
+5. Reports hiện có nhiều endpoint hơn bản ghi chú cũ, bao gồm thống kê allocation, maintenance và recent activity.

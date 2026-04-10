@@ -43,7 +43,6 @@ class AllocationBase(BaseModel):
     expected_return_date: date | None = None
     purpose: str | None = Field(default=None, max_length=2000)
     note: str | None = Field(default=None, max_length=2000)
-    is_active: bool = True
 
     @model_validator(mode="after")
     def validate_resource_selection(self) -> "AllocationBase":
@@ -77,7 +76,6 @@ class AllocationUpdate(BaseModel):
     expected_return_date: date | None = None
     purpose: str | None = Field(default=None, max_length=2000)
     note: str | None = Field(default=None, max_length=2000)
-    is_active: bool | None = None
     status: AllocationStatus | None = None
     quantity: Decimal | None = Field(default=None, gt=0)
 

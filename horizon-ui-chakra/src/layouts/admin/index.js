@@ -1,11 +1,11 @@
 // Chakra imports
-import { Portal, Box, useDisclosure } from '@chakra-ui/react';
+import { Portal, Box, useDisclosure, useToast } from '@chakra-ui/react';
 import Footer from 'components/footer/FooterAdmin.js';
 // Layout components
 import Navbar from 'components/navbar/NavbarAdmin.js';
 import Sidebar from 'components/sidebar/Sidebar.js';
 import { SidebarContext } from 'contexts/SidebarContext';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import routes from 'routes.js';
 
@@ -13,6 +13,7 @@ import routes from 'routes.js';
 export default function Dashboard(props) {
   const { ...rest } = props;
   const location = useLocation();
+  const toast = useToast();
   // states and functions
   const [fixed] = useState(false);
   const [toggleSidebar, setToggleSidebar] = useState(false);
@@ -100,6 +101,39 @@ export default function Dashboard(props) {
     });
   };
   // Update navbar props when route changes
+  const [name, setName] = useState('');
+ const fetchDataUser = useCallback(async () => {
+     try {
+       const token = localStorage.getItem("access_token");
+       const res = await fetch("http://127.0.0.1:8000/api/v1/auth/me", {
+         headers: {
+           "Content-Type": "application/json",
+           Authorization: `Bearer ${token}`
+         }
+       });
+ 
+       if (!res.ok) {
+         throw new Error("Cannot load data user");
+       }
+ 
+       const data = await res.json();
+ 
+        setName(data.username);
+        console.log(data);
+     } catch ( error ) {
+       console.error("Fetch data user failed:", error);
+       toast({
+         title: "Fetch data user failed",
+         status: "error",
+       });
+     }
+   },[toast]);
+
+   useEffect(() => {
+       fetchDataUser();
+     }, [fetchDataUser]);
+
+
   const [brandText, setBrandText] = useState(getActiveRoute(adminRoutes, location.pathname));
   const [secondary, setSecondary] = useState(getActiveNavbar(adminRoutes, location.pathname));
   const [message, setMessage] = useState(getActiveNavbarText(adminRoutes, location.pathname));
@@ -138,6 +172,7 @@ export default function Dashboard(props) {
             <Portal>
               <Box>
                 <Navbar
+                  name = {name}
                   onOpen={onOpen}
                   logoText={'Horizon UI Dashboard PRO'}
                   brandText={brandText}

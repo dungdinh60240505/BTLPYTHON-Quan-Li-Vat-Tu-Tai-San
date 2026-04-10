@@ -37,7 +37,6 @@ def list_supplies(
     category: str | None = None,
     managed_department_id: int | None = None,
     low_stock_only: bool = False,
-    is_active: bool | None = None,
 ) -> list[Supply]:
     statement = (
         select(Supply)
@@ -66,9 +65,6 @@ def list_supplies(
 
     if low_stock_only:
         statement = statement.where(Supply.quantity_in_stock <= Supply.minimum_stock_level)
-
-    if is_active is not None:
-        statement = statement.where(Supply.is_active == is_active)
 
     return list(db.scalars(statement).all())
 
@@ -103,7 +99,6 @@ def create_supply(db: Session, payload: SupplyCreate) -> Supply:
         description=payload.description.strip() if payload.description else None,
         note=payload.note.strip() if payload.note else None,
         managed_department_id=managed_department_id,
-        is_active=payload.is_active,
     )
 
     db.add(supply)
@@ -171,9 +166,6 @@ def update_supply(db: Session, supply: Supply, payload: SupplyUpdate) -> Supply:
                 )
         supply.managed_department_id = managed_department_id
 
-    if "is_active" in update_data and update_data["is_active"] is not None:
-        supply.is_active = update_data["is_active"]
-
     db.add(supply)
     db.commit()
     db.refresh(supply)
@@ -200,12 +192,9 @@ def update_supply_stock(db: Session, supply: Supply, payload: SupplyStockUpdate)
 
 
 
-def deactivate_supply(db: Session, supply: Supply) -> Supply:
-    supply.is_active = False
-    db.add(supply)
+def delete_supply(db: Session, supply: Supply) -> None:
+    db.delete(supply)
     db.commit()
-    db.refresh(supply)
-    return get_supply_or_404(db=db, supply_id=supply.id)
 
 
 

@@ -18,7 +18,6 @@ class UserBase(BaseModel):
     avatar_url: str | None = Field(default=None, max_length=500)
     role: UserRole = UserRole.STAFF
     department_id: int | None = None
-    is_active: bool = True
 
 
 class UserCreate(UserBase):
@@ -42,7 +41,6 @@ class UserUpdate(BaseModel):
     avatar_url: str | None = Field(default=None, max_length=500)
     role: UserRole | None = None
     department_id: int | None = None
-    is_active: bool | None = None
 
 
 class UserResponse(BaseModel):
@@ -55,7 +53,6 @@ class UserResponse(BaseModel):
     phone_number: str | None = None
     avatar_url: str | None = None
     role: UserRole
-    is_active: bool
     department_id: int | None = None
     department: DepartmentSimple | None = None
     created_at: datetime
@@ -70,4 +67,3 @@ class UserSimple(BaseModel):
     full_name: str
     avatar_url: str | None = None
     role: UserRole
-    is_active: bool

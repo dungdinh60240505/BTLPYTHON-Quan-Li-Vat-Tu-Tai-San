@@ -37,7 +37,7 @@ import ComplexTable from "views/admin/default/components/ComplexTable";
 import Tasks from "views/admin/default/components/Tasks";
 import {
   columnsDataComplex,
-  columnsDataInactiveUsers,
+  columnsDataActiveUsers,
 } from "views/admin/default/variables/columnsData";
 
 const API_BASE_URL = "http://127.0.0.1:8000/api/v1";
@@ -57,13 +57,13 @@ export default function UserReports() {
   });
   const [lowStockSupplies, setLowStockSupplies] = React.useState([]);
   const [assetStatusSummary, setAssetStatusSummary] = React.useState([]);
-  const [inactiveUsers, setInactiveUsers] = React.useState([]);
+  const [activeUsers, setActiveUsers] = React.useState([]);
 
   React.useEffect(() => {
     const fetchDashboardData = async () => {
       try {
         const token = localStorage.getItem("access_token");
-        const [summaryRes, lowStockRes, assetStatusRes, inactiveUsersRes] = await Promise.all([
+        const [summaryRes, lowStockRes, assetStatusRes, activeUsersRes] = await Promise.all([
           fetch(`${API_BASE_URL}/reports/dashboard-summary`, {
             headers: {
               "Content-Type": "application/json",
@@ -82,7 +82,7 @@ export default function UserReports() {
               Authorization: `Bearer ${token}`,
             },
           }),
-          fetch(`${API_BASE_URL}/users?is_active=false`, {
+          fetch(`${API_BASE_URL}/users`, {
             headers: {
               "Content-Type": "application/json",
               Authorization: `Bearer ${token}`,
@@ -115,15 +115,16 @@ export default function UserReports() {
           setAssetStatusSummary(assetStatusData);
         }
 
-        if (inactiveUsersRes.ok) {
-          const inactiveUsersData = await inactiveUsersRes.json();
-          setInactiveUsers(
-            inactiveUsersData.map((user) => ({
+        if (activeUsersRes.ok) {
+          const activeUsersData = await activeUsersRes.json();
+          setActiveUsers(
+            activeUsersData.map((user) => ({
               ...user,
               department_name: user.department?.name ?? "No department",
             })),
           );
         }
+        console.log("Users: ", activeUsers);
       } catch (error) {
         console.error("Fetch dashboard summary failed:", error);
       }
@@ -305,9 +306,9 @@ export default function UserReports() {
           title="Low Stock Supplies"
         />
         <ComplexTable
-          columnsData={columnsDataInactiveUsers}
-          tableData={inactiveUsers}
-          title="Inactive Users"
+          columnsData={columnsDataActiveUsers}
+          tableData={activeUsers}
+          title="Active Users"
         />
       </SimpleGrid>
 
